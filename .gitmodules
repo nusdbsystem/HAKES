@@ -1,0 +1,15 @@
+[submodule "deps/llhttp"]
+	path = deps/llhttp
+	url = https://github.com/nodejs/llhttp.git
+[submodule "deps/libuv"]
+	path = deps/libuv
+	url = https://github.com/libuv/libuv.git
+[submodule "deps/ratls"]
+	path = deps/ratls
+	url = https://github.com/hugy718/sgx-ra-tls.git
+[submodule "deps/tflm"]
+	path = deps/tflm
+	url = https://github.com/hugy718/tflite-micro.git
+[submodule "deps/tvm"]
+	path = deps/tvm
+	url = https://github.com/apache/tvm.git
