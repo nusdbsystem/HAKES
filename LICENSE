@@ -1,3 +1,4 @@
+
                                  Apache License
                            Version 2.0, January 2004
                         http://www.apache.org/licenses/
@@ -199,3 +200,42 @@
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
+
+===
+   HAKES includes source code with separate copyright notices and
+   license terms. Your use of this source code is subject to the terms
+   and condition of the following licenses.
+===
+   Portions of the HAKES embed worker tvm crt runtime
+       located at:
+         embed-worker/inference-runtime/tvm_crt/src/common/
+
+   are available under the Apache License 2.0 at license/tvm/
+---
+   Portions of the Hakes store
+       located at:
+         hakes-store/hakes-store/io/dir_unix.go,
+         hakes-store/hakes-store/table/,
+       and
+         hakes-store/hakes-store/kv/
+
+   are available under the Apache License 2.0 at license/badger/
+---
+   Portions of the Hakes search worker index module
+       located at:
+         search-worker/index/blas/
+
+   are available under the copyright notice at license/clapack/
+---
+   Portions of the Hakes search worker index module
+       located at:
+         search-worker/index/impl/,
+         search-worker/index/invlists/,
+         search-worker/index/platfrom/,
+         search-worker/index/utils/,
+         search-worker/index/*.h,
+       and
+         search-worker/index/*.cpp
+
+   are available under the MIT License at license/faiss/
+---

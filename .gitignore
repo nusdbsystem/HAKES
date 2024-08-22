@@ -17,7 +17,6 @@
 *.dll
 
 # Fortran module files
-*.mod
 *.smod
 
 # Compiled Static libraries
@@ -30,3 +29,37 @@
 *.exe
 *.out
 *.app
+
+# vscode
+.vscode
+
+# build
+install
+build
+deps
+app
+app3
+app_no_sgx
+app3_no_sgx
+key_server
+keyservice_client
+embed_server
+embed_server_no_sgx
+search_server
+search_server_no_sgx
+hakes_server
+hakes_server_no_sgx
+
+# test
+tmp
+data
+
+# SGX
+Enclave_u.h
+Enclave_u.c
+Enclave_t.h
+Enclave_t.c
+
+# SGX mode copied over headers
+search-worker/include/search-worker/trusted/intrinsics
+search-worker/include/search-worker/trusted/omp.h

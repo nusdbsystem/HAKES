@@ -1,0 +1,84 @@
+# sample config file for hakes-store kv.
+
+# the name will be used as path-prefix
+name: hakes-store-test-kv
+# configuration for css service that stores SST
+css-config:
+  # local/s3
+  type: local
+  path: hakes-store-test-kv
+manifest-handler:
+  # local/s3
+  type: local
+  path: hakes-store-test-kv
+dlog-handler:
+  # local/kinesis
+  type: local
+  # local: path hakes-store-test-kv/log will be used
+  # kinesis: hakes-store-test-kv-log will be used as stream prefix
+  path: hakes-store-test-kv
+# compaction scheduler will send compaction context to store-daemon when the scheduling policy decides so.
+compaction-scheduler:
+  use: false
+  type: always
+  store-daemon-ip: 192.168.1.103
+  store-daemon-port: 2220
+sstcache-config:
+  # local/remote/none
+  type: none
+  # MB
+  capacity: 2048
+  remote-ip: 127.0.0.1
+  remote-port: 2191
+  css-config:
+    type: local
+    path: hakes-store-sc
+# a set of exposed options
+lsm-config:
+  sync-writes: false
+  # info/debug/warning/error
+  log-type: info
+  log-path: hakes-store.log
+  # None/Snappy/ZSTD
+  compression-type: None
+  # in MB
+  memtable-size: 64
+  # in MB
+  basetable-size: 64
+  # in MB
+  baselevel-size: 256
+  # int
+  levelsize-multiplier: 10
+  # int
+  tablesize-multiplier: 1
+  # int
+  maxlevel: 7
+  # values larger than value threshold will be stored separately (in KB)
+  value-threshold: 1024
+  # num memtable to throttle (apply flush pressure back)
+  num-memtable: 5
+  # in KB
+  block-size: 4
+  # bloom false positive rate (float)
+  bloom-fpr: 0.01
+  # in MB
+  block-cache-size: 2048
+  # in MB
+  index-cache-size: 0
+  # int
+  num-level-zero-table: 5
+  # int
+  num-level-zero-table-stall: 15
+  # int
+  num-compactor: 4
+  # LmaxCompaction
+  lmax-compaction: true  
+  # DisableWAL
+  disableWAL: false
+  # PrefetchMode: Sync/Async/None
+  prefetch-mode: Sync
+  # in KB
+  # prefetch-size: 256
+  prefetch-size: 2048
+  log-compaction-stats: true
+  log-flush-stats: true

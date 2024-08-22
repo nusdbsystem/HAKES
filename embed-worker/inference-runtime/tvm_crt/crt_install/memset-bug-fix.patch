@@ -1,0 +1,13 @@
+diff --git a/src/runtime/crt/memory/page_allocator.c b/src/runtime/crt/memory/page_allocator.c
+index c016fe2..0b6bb54 100644
+--- a/src/runtime/crt/memory/page_allocator.c
++++ b/src/runtime/crt/memory/page_allocator.c
+@@ -280,7 +280,7 @@ tvm_crt_error_t PageMemoryManager_Free(MemoryManagerInterface* interface, void*
+ tvm_crt_error_t PageMemoryManagerCreate(MemoryManagerInterface** interface, uint8_t* memory_pool,
+                                         size_t memory_pool_size_bytes,
+                                         size_t page_size_bytes_log2) {
+-  memset(memory_pool, 0, sizeof(memory_pool_size_bytes));
++  memset(memory_pool, 0, memory_pool_size_bytes);
+ 
+   // Allocate enough space for MAX_PAGES.
+   size_t page_size_bytes = 1 << page_size_bytes_log2;
