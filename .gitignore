@@ -59,6 +59,7 @@ Enclave_u.h
 Enclave_u.c
 Enclave_t.h
 Enclave_t.c
+secret/ra_tls_options.c
 
 # SGX mode copied over headers
 search-worker/include/search-worker/trusted/intrinsics
