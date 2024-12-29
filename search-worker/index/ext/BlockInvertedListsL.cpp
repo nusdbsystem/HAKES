@@ -209,12 +209,12 @@ BlockInvertedListsL::~BlockInvertedListsL() {
     delete packer_;
   }
 }
-void InvListUnit::write(IOWriter* f) const {
+void InvListUnit::write(hakes::IOWriter* f) const {
   WRITEVECTOR(ids_);
   WRITEVECTOR(codes_);
 }
 
-void InvListUnit::read(IOReader* f) {
+void InvListUnit::read(hakes::IOReader* f) {
   READVECTOR(ids_);
   READVECTOR(codes_);
   count_.store(ids_.size(), std::memory_order_relaxed);

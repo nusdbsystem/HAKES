@@ -89,8 +89,8 @@ void IndexFlatL::range_search(idx_t n, const float* x, float radius,
 }
 
 void IndexFlatL::compute_distance_subset(idx_t n, const float* x, idx_t k,
-                                         float* distances,
-                                         const idx_t* labels) const {
+                                         float* distances, const idx_t* labels,
+                                         const SearchParameters* params) const {
   // obtain the shared access here so ntotal can be directly accessed
   const float* xb = get_xb();
   switch (metric_type) {

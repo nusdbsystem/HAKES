@@ -16,19 +16,19 @@
 
 namespace faiss {
 
-/***********************************************************************
- * IO functions
- ***********************************************************************/
+// /***********************************************************************
+//  * IO functions
+//  ***********************************************************************/
 
-int IOReader::fileno() {
-    // FAISS_THROW_MSG("IOReader does not support memory mapping");
-    assert(!"IOReader does not support memory mapping");
-}
+// int IOReader::fileno() {
+//     // FAISS_THROW_MSG("IOReader does not support memory mapping");
+//     assert(!"IOReader does not support memory mapping");
+// }
 
-int IOWriter::fileno() {
-    // FAISS_THROW_MSG("IOWriter does not support memory mapping");
-    assert(!"IOWriter does not support memory mapping");
-}
+// int IOWriter::fileno() {
+//     // FAISS_THROW_MSG("IOWriter does not support memory mapping");
+//     assert(!"IOWriter does not support memory mapping");
+// }
 
 // /***********************************************************************
 //  * IO Vector

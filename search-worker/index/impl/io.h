@@ -25,42 +25,42 @@
 
 namespace faiss {
 
-struct IOReader {
-    // name that can be used in error messages
-    std::string name;
+// struct IOReader {
+//     // name that can be used in error messages
+//     std::string name;
 
-    // fread. Returns number of items read or 0 in case of EOF.
-    virtual size_t operator()(void* ptr, size_t size, size_t nitems) = 0;
+//     // fread. Returns number of items read or 0 in case of EOF.
+//     virtual size_t operator()(void* ptr, size_t size, size_t nitems) = 0;
 
-    // return a file number that can be memory-mapped
-    virtual int fileno();
+//     // return a file number that can be memory-mapped
+//     virtual int fileno();
 
-    virtual ~IOReader() {}
-};
+//     virtual ~IOReader() {}
+// };
 
-struct IOWriter {
-    // name that can be used in error messages
-    std::string name;
+// struct IOWriter {
+//     // name that can be used in error messages
+//     std::string name;
 
-    // fwrite. Return number of items written
-    virtual size_t operator()(const void* ptr, size_t size, size_t nitems) = 0;
+//     // fwrite. Return number of items written
+//     virtual size_t operator()(const void* ptr, size_t size, size_t nitems) = 0;
 
-    // return a file number that can be memory-mapped
-    virtual int fileno();
+//     // return a file number that can be memory-mapped
+//     virtual int fileno();
 
-    virtual ~IOWriter() noexcept(false) {}
-};
+//     virtual ~IOWriter() noexcept(false) {}
+// };
 
-struct VectorIOReader : IOReader {
-    std::vector<uint8_t> data;
-    size_t rp = 0;
-    size_t operator()(void* ptr, size_t size, size_t nitems) override;
-};
+// struct VectorIOReader : IOReader {
+//     std::vector<uint8_t> data;
+//     size_t rp = 0;
+//     size_t operator()(void* ptr, size_t size, size_t nitems) override;
+// };
 
-struct VectorIOWriter : IOWriter {
-    std::vector<uint8_t> data;
-    size_t operator()(const void* ptr, size_t size, size_t nitems) override;
-};
+// struct VectorIOWriter : IOWriter {
+//     std::vector<uint8_t> data;
+//     size_t operator()(const void* ptr, size_t size, size_t nitems) override;
+// };
 
 // struct FileIOReader : IOReader {
 //     FILE* f = nullptr;

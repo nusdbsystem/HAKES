@@ -112,6 +112,10 @@ struct IndexFlatCodesL : Index {
 
   // permute_entries. perm of size ntotal maps new to old positions
   void permute_entries(const idx_t* perm);
+
+  virtual void compute_distance_subset(
+      idx_t n, const float* x, idx_t k, float* distances, const idx_t* labels,
+      const SearchParameters* params = nullptr) const = 0;
 };
 
 }  // namespace faiss

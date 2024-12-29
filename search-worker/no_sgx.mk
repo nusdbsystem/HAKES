@@ -4,24 +4,25 @@ HAKES_ROOT_DIR ?= $(shell readlink -f ..)
 DEPS_INSTALL_DIR = $(HAKES_ROOT_DIR)/deps/install
 LIBUV_DIR = $(DEPS_INSTALL_DIR)/libuv
 LLHTTP_DIR = $(DEPS_INSTALL_DIR)/llhttp
+MKL_LIBRARY_PATH ?= $(HOME)/intel/oneapi/mkl/2024.0/lib/
 
 WARNING_IGNORE = -Wno-sign-compare -Wno-unused-variable -Wno-comment -Wno-unused-function -Wno-unused-but-set-variable -Wno-unused-parameter -Wno-type-limits
 COMMON_FLAGS = -fpic -fopenmp -ftree-vectorize -Wall -Wextra $(WARNING_IGNORE)
 ifeq ($(DEBUG), 1)
-	COMMON_FLAGS += -g -fsanitize=address
+	COMMON_FLAGS += -march=native -O2 -g -fsanitize=address
 else
-	COMMON_FLAGS += -O2 -march=native
+	COMMON_FLAGS += -Ofast -march=native
 endif
 
 App_Cpp_Flags = -std=c++17 $(COMMON_FLAGS)
 COMMON_INCLUDE_FLAGS = -I. -I${PROJECT_ROOT_DIR}/include -I${HAKES_ROOT_DIR}
 App_Cpp_Flags += $(COMMON_INCLUDE_FLAGS)
 
-App_Link_Flags = -lrt -pthread -lm -lcrypto -lssl -fopenmp -ldl
+App_Link_Flags = -lrt -pthread -lm -lcrypto -lssl -fopenmp -ldl -L$(MKL_LIBRARY_PATH) -lmkl_rt
 
 .PHONY: all clean build_dir
 
-all: app_no_sgx search_server_no_sgx app3_no_sgx
+all: app_no_sgx search_server_no_sgx app3_no_sgx index_test
 
 build_dir:
 	@echo "Creating build directory"
@@ -46,6 +47,10 @@ src/no-sgx/index-build/blas/%.o: index/blas/%.c build_dir
 ## index srcs
 
 ## other srcs
+src/no-sgx/io.o: ${HAKES_ROOT_DIR}/utils/io.cpp
+	$(CXX) ${App_Cpp_Flags} -c $< -o $@
+	@echo "CXX <= $<"
+
 src/no-sgx/fileutil.o: ${HAKES_ROOT_DIR}/utils/fileutil.cpp
 	$(CXX) ${App_Cpp_Flags} -c $< -o $@
 	@echo "CXX <= $<"
@@ -73,6 +78,7 @@ src/no-sgx/%.o: src/no-sgx/%.cc
 	@echo "CXX <= $<"
 
 Objects := src/no-sgx/worker.o \
+	src/no-sgx/io.o \
 	src/no-sgx/fileutil.o \
 	src/no-sgx/hexutil.o \
 	src/no-sgx/json.o \
@@ -87,6 +93,7 @@ Objects := src/no-sgx/worker.o \
 	src/no-sgx/index-build/ext/IndexIVFL.o \
 	src/no-sgx/index-build/ext/IndexIVFPQFastScanL.o \
 	src/no-sgx/index-build/ext/IndexRefineL.o \
+	src/no-sgx/index-build/ext/IndexScalarQuantizerL.o \
 	src/no-sgx/index-build/impl/AuxIndexStructures.o \
 	src/no-sgx/index-build/impl/CodePacker.o \
 	src/no-sgx/index-build/impl/IDSelector.o \
@@ -96,17 +103,17 @@ Objects := src/no-sgx/worker.o \
 	src/no-sgx/index-build/impl/pq4_fast_scan_search_qbs.o \
 	src/no-sgx/index-build/impl/pq4_fast_scan.o \
 	src/no-sgx/index-build/impl/ProductQuantizer.o \
+	src/no-sgx/index-build/impl/ScalarQuantizer.o \
 	src/no-sgx/index-build/invlists/DirectMap.o \
 	src/no-sgx/index-build/invlists/InvertedLists.o \
 	src/no-sgx/index-build/utils/distances_simd.o \
 	src/no-sgx/index-build/utils/distances.o \
 	src/no-sgx/index-build/utils/Heap.o \
+	src/no-sgx/index-build/utils/partitioning.o \
 	src/no-sgx/index-build/utils/quantize_lut.o \
 	src/no-sgx/index-build/utils/random.o \
 	src/no-sgx/index-build/utils/sorting.o \
 	src/no-sgx/index-build/utils/utils.o \
-	src/no-sgx/index-build/blas/sgemm.o \
-	src/no-sgx/index-build/blas/lsame.o \
 	src/no-sgx/index-build/Clustering.o \
 	src/no-sgx/index-build/Index.o \
 	src/no-sgx/index-build/IndexFlat.o \
@@ -126,10 +133,17 @@ app_no_sgx: src/no-sgx/app.cc libworker.a
 app3_no_sgx: src/no-sgx/app3.cc libworker.a
 	$(CXX) ${App_Cpp_Flags} $< -L. -l:libworker.a -o $@ ${COMMON_LINK_FLAGS} $(App_Link_Flags)
 
+index_test: src/no-sgx/index_test.cpp libworker.a
+	$(CXX) ${App_Cpp_Flags} $< -L. -l:libworker.a -o $@ ${COMMON_LINK_FLAGS} $(App_Link_Flags)
+
 ## Build search server ##
 
 Server_Additional_Include_Flags := -Iserver -I$(LIBUV_DIR)/include -I$(LLHTTP_DIR)/include -I$(HAKES_ROOT_DIR)/server
 Server_Additional_Link_Flags := -L$(LIBUV_DIR)/lib -l:libuv_a.a -L$(LLHTTP_DIR)/lib -l:libllhttp.a -lrt -ldl
+
+ifeq ($(DEBUG), 1)
+	Server_Additional_Link_Flags += -g -fsanitize=address
+endif
 
 server/no-sgx/service.o: $(HAKES_ROOT_DIR)/server/service.cpp
 	$(CXX) $(App_Cpp_Flags) $(Server_Additional_Include_Flags) -c $< -o $@

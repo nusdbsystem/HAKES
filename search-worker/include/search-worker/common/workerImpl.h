@@ -31,7 +31,8 @@ class WorkerImpl : public Worker {
   WorkerImpl() = default;
   virtual ~WorkerImpl() {}
 
-  bool Initialize(const char* index_data, size_t index_len, int cluster_size, int server_id) override;
+  bool Initialize(hakes::IOReader* ff, hakes::IOReader* rf, hakes::IOReader* uf,
+                  bool keep_pa, int cluster_size, int server_id) override;
 
   bool IsInitialized() override;
 
