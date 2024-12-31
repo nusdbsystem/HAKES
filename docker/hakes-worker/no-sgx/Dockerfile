@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y libssl-dev libcurl4-openssl-dev
 
 COPY --from=hakes_es_base_nosgx:v1 /hakes-es/deps /hakes-es/deps
 COPY ./hakes-worker/ /hakes-es/hakes-worker
+COPY ./embed-endpoint/ /hakes-es/embed-endpoint
 COPY ./message/ /hakes-es/message
 COPY ./ratls-channel/ /hakes-es/ratls-channel
 COPY ./secret/ /hakes-es/secret
