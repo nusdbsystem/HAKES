@@ -79,6 +79,19 @@ bool load_hakes_rindex(hakes::IOReader* rf, int d, HakesIndex* idx,
 bool load_hakes_index(hakes::IOReader* ff, hakes::IOReader* rf, HakesIndex* idx,
                       bool keep_pa);
 
+bool load_hakes_findex_new(hakes::IOReader* ff, HakesIndex* idx, bool keep_pa);
+bool load_hakes_rindex_new(hakes::IOReader* rf, int d, HakesIndex* idx,
+                       bool keep_pa);
+bool load_hakes_index_new(hakes::IOReader* ff, hakes::IOReader* rf, HakesIndex* idx,
+                      bool keep_pa);
+
+void save_hakes_findex(hakes::IOWriter* ff, const HakesIndex* idx);
+
+void save_hakes_rindex(hakes::IOWriter* rf, const HakesIndex* idx);
+
+void save_hakes_index(hakes::IOWriter* ff, hakes::IOWriter* rf,
+                      const HakesIndex* idx);
+
 }  // namespace faiss
 
 #endif  // HAKES_SEARCHWORKER_INDEX_EXT_INDEXIOEXT_H_

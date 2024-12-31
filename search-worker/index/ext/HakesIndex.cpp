@@ -26,11 +26,11 @@
 namespace faiss {
 
 bool HakesIndex::Initialize(hakes::IOReader* ff, hakes::IOReader* rf, hakes::IOReader* uf, bool keep_pa) {
-  bool success = load_hakes_index(ff, rf, this, keep_pa);
+  bool success = load_hakes_index_new(ff, rf, this, keep_pa);
   if (uf != nullptr) {
     // load query index
     faiss::HakesIndex update_index;
-    success = load_hakes_index(uf, nullptr, &update_index, keep_pa);
+    success = load_hakes_index_new(uf, nullptr, &update_index, keep_pa);
     this->UpdateIndex(update_index);
   } else if (use_ivf_sq_) {
     // no query index provided, apply sq to the ivf centroids
