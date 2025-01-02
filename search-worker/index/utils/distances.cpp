@@ -27,7 +27,34 @@
 
 // #include <faiss/utils/distances_fused/distances_fused.h>
 
+#ifdef USE_SGX
 #include "search-worker/index/blas/sgemm.h"
+#else // USE_SGX
+
+extern "C" {
+
+#ifndef FINTEGER
+#define FINTEGER long
+#endif
+
+/* declare BLAS functions, see http://www.netlib.org/clapack/cblas/ */
+
+int sgemm_(
+        const char* transa,
+        const char* transb,
+        FINTEGER* m,
+        FINTEGER* n,
+        FINTEGER* k,
+        const float* alpha,
+        const float* a,
+        FINTEGER* lda,
+        const float* b,
+        FINTEGER* ldb,
+        float* beta,
+        float* c,
+        FINTEGER* ldc);
+}
+#endif // USE_SGX
 
 namespace faiss {
 
@@ -660,13 +687,13 @@ void knn_inner_product(
     if (k == 1) {
         Top1BlockResultHandler<CMin<float, int64_t>> res(nx, vals, ids);
         knn_inner_product_select(x, y, d, nx, ny, res, sel);
-    // } else if (k < distance_compute_min_k_reservoir) {
-    } else {
+    } else if (k < distance_compute_min_k_reservoir) {
+    // } else {
         HeapBlockResultHandler<CMin<float, int64_t>> res(nx, vals, ids, k);
         knn_inner_product_select(x, y, d, nx, ny, res, sel);
-    // } else {
-    //     ReservoirBlockResultHandler<CMin<float, int64_t>> res(nx, vals, ids, k);
-    //     knn_inner_product_select(x, y, d, nx, ny, res, sel);
+    } else {
+        ReservoirBlockResultHandler<CMin<float, int64_t>> res(nx, vals, ids, k);
+        knn_inner_product_select(x, y, d, nx, ny, res, sel);
     }
 
     if (imin != 0) {
@@ -717,13 +744,13 @@ void knn_L2sqr(
     if (k == 1) {
         Top1BlockResultHandler<CMax<float, int64_t>> res(nx, vals, ids);
         knn_L2sqr_select(x, y, d, nx, ny, res, y_norm2, sel);
-    // } else if (k < distance_compute_min_k_reservoir) {
-    } else {
+    } else if (k < distance_compute_min_k_reservoir) {
+    // } else {
         HeapBlockResultHandler<CMax<float, int64_t>> res(nx, vals, ids, k);
         knn_L2sqr_select(x, y, d, nx, ny, res, y_norm2, sel);
-    // } else {
-    //     ReservoirBlockResultHandler<CMax<float, int64_t>> res(nx, vals, ids, k);
-    //     knn_L2sqr_select(x, y, d, nx, ny, res, y_norm2, sel);
+    } else {
+        ReservoirBlockResultHandler<CMax<float, int64_t>> res(nx, vals, ids, k);
+        knn_L2sqr_select(x, y, d, nx, ny, res, y_norm2, sel);
     }
     if (imin != 0) {
         for (size_t i = 0; i < nx * k; i++) {

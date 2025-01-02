@@ -19,6 +19,8 @@
 
 #include <cstddef>
 
+#include "utils/io.h"
+
 namespace search_worker {
 
 class Worker {
@@ -26,7 +28,9 @@ class Worker {
   Worker() = default;
   virtual ~Worker() {}
 
-  virtual bool Initialize(const char* index_data, size_t index_len, int cluster_size, int server_id) = 0;
+  virtual bool Initialize(hakes::IOReader* ff, hakes::IOReader* rf,
+                          hakes::IOReader* uf, bool keep_pa, int cluster_size,
+                          int server_id) = 0;
 
   // the worker shall be pre-initialized before installing to a search worker
   virtual bool IsInitialized() = 0;

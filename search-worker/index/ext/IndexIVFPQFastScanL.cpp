@@ -190,8 +190,9 @@ void IndexIVFPQFastScanL::compute_LUT(size_t n, const float* x,
                                       const CoarseQuantized& cq,
                                       AlignedTable<float>& dis_tables,
                                       AlignedTable<float>& biases) const {
-  size_t dim12 = pq.ksub * pq.M;
-  size_t d = pq.d;
+  auto& qpq_ref = (has_q_pq) ? q_pq : pq;
+  size_t dim12 = qpq_ref.ksub * qpq_ref.M;
+  size_t d = qpq_ref.d;
   size_t nprobe = this->nprobe;
 
   if (by_residual) {
@@ -203,9 +204,9 @@ void IndexIVFPQFastScanL::compute_LUT(size_t n, const float* x,
         memcpy(biases.get(), cq.dis, sizeof(float) * n * nprobe);
 
         AlignedTable<float> ip_table(n * dim12);
-        pq.compute_inner_prod_tables(n, x, ip_table.get());
+        qpq_ref.compute_inner_prod_tables(n, x, ip_table.get());
 
-#pragma omp parallel for if (n * nprobe > 8000)
+// #pragma omp parallel for if (n * nprobe > 8000)
         for (idx_t ij = 0; ij < n * nprobe; ij++) {
           idx_t i = ij / nprobe;
           float* tab = dis_tables.get() + ij * dim12;
@@ -226,7 +227,7 @@ void IndexIVFPQFastScanL::compute_LUT(size_t n, const float* x,
         biases.resize(n * nprobe);
         memset(biases.get(), 0, sizeof(float) * n * nprobe);
 
-#pragma omp parallel for if (n * nprobe > 8000)
+// #pragma omp parallel for if (n * nprobe > 8000)
         for (idx_t ij = 0; ij < n * nprobe; ij++) {
           idx_t i = ij / nprobe;
           float* xij = &xrel[ij * d];
@@ -240,12 +241,12 @@ void IndexIVFPQFastScanL::compute_LUT(size_t n, const float* x,
           }
         }
 
-        pq.compute_distance_tables(n * nprobe, xrel.get(), dis_tables.get());
+        qpq_ref.compute_distance_tables(n * nprobe, xrel.get(), dis_tables.get());
       }
 
     } else if (metric_type == METRIC_INNER_PRODUCT) {
       dis_tables.resize(n * dim12);
-      pq.compute_inner_prod_tables(n, x, dis_tables.get());
+      qpq_ref.compute_inner_prod_tables(n, x, dis_tables.get());
 
       biases.resize(n * nprobe);
       memcpy(biases.get(), cq.dis, sizeof(float) * n * nprobe);
@@ -257,9 +258,9 @@ void IndexIVFPQFastScanL::compute_LUT(size_t n, const float* x,
   } else {
     dis_tables.resize(n * dim12);
     if (metric_type == METRIC_L2) {
-      pq.compute_distance_tables(n, x, dis_tables.get());
+      qpq_ref.compute_distance_tables(n, x, dis_tables.get());
     } else if (metric_type == METRIC_INNER_PRODUCT) {
-      pq.compute_inner_prod_tables(n, x, dis_tables.get());
+      qpq_ref.compute_inner_prod_tables(n, x, dis_tables.get());
     } else {
       // FAISS_THROW_FMT("metric %d not supported", metric_type);
       assert(!"metric not supported");

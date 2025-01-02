@@ -403,6 +403,33 @@ void IndexIVFFastScanL::search_preassigned(idx_t n, const float* x, idx_t k,
   search_dispatch_implem(n, x, k, distances, labels, cq, nullptr);
 }
 
+void IndexIVFFastScanL::search_preassigned_new(
+    idx_t n, const float* x, idx_t k, const idx_t* assign,
+    const float* centroid_dis, float* distances, idx_t* labels,
+    bool store_pairs, const IVFSearchParameters* params,
+    IndexIVFStats* /*stats*/) const {
+  size_t nprobe = this->nprobe;
+  if (params) {
+    // FAISS_THROW_IF_NOT_MSG(!params->quantizer_params,
+    //                        "quantizer params not supported");
+    assert(!params->quantizer_params);
+    // FAISS_THROW_IF_NOT(params->max_codes == 0);
+    assert(params->max_codes == 0);
+    nprobe = params->nprobe;
+    // printf("nprobe set to: %ld\n", nprobe);
+  }
+  // FAISS_THROW_IF_NOT_MSG(!store_pairs,
+  //                        "store_pairs not supported for this index");
+  assert(!store_pairs);
+  // guoyu0213  intended to be nullptr
+  // FAISS_THROW_IF_NOT_MSG(!stats, "stats not supported for this index");
+  // FAISS_THROW_IF_NOT(k > 0);
+  assert(k > 0);
+
+  const CoarseQuantized cq = {nprobe, centroid_dis, assign};
+  search_dispatch_implem_new(n, x, k, distances, labels, cq, nullptr);
+}
+
 void IndexIVFFastScanL::range_search(idx_t n, const float* x, float radius,
                                      RangeSearchResult* result,
                                      const SearchParameters* params) const {
@@ -421,7 +448,7 @@ ResultHandlerCompare<C, true>* make_knn_handler_fixC(int impl, idx_t n, idx_t k,
                                                      float* distances,
                                                      idx_t* labels) {
   using HeapHC = HeapHandler<C, true>;
-  // using ReservoirHC = ReservoirHandler<C, true>;
+  using ReservoirHC = ReservoirHandler<C, true>;
   using SingleResultHC = SingleResultHandler<C, true>;
 
   if (k == 1) {
@@ -430,8 +457,8 @@ ResultHandlerCompare<C, true>* make_knn_handler_fixC(int impl, idx_t n, idx_t k,
     return new HeapHC(n, 0, k, distances, labels);
   } else /* if (impl % 2 == 1) */ {
     // guoyu0606 also use heap handler
-    // return new ReservoirHC(n, 0, k, 2 * k, distances, labels);
-    return new HeapHC(n, 0, k, distances, labels);
+    return new ReservoirHC(n, 0, k, 2 * k, distances, labels);
+    // return new HeapHC(n, 0, k, distances, labels);
   }
 }
 
@@ -639,6 +666,147 @@ void IndexIVFFastScanL::search_dispatch_implem(
 
   // std::chrono::high_resolution_clock::time_point end =
   //     std::chrono::high_resolution_clock::now();
+}
+
+
+void IndexIVFFastScanL::search_dispatch_implem_new(
+    idx_t n, const float* x, idx_t k, float* distances, idx_t* labels,
+    const CoarseQuantized& cq_in, const NormTableScaler* scaler) const {
+  bool is_max =
+      !is_similarity_metric(metric_type);  // ip will leads to is_max = false;
+  using RH = SIMDResultHandlerToFloat;
+
+  if (n == 0) {
+    return;
+  }
+
+  // actual implementation used
+  int impl = implem;
+
+  if (impl == 0) {
+    if (bbs == 32) {
+      impl = 12;
+    } else {
+      impl = 10;
+    }
+    if (k > 20) {  // use reservoir rather than heap
+      impl++;
+    }
+  }
+  // so unless explicitly set by directly accessing the implem fields. impl will
+  // take the values, 0, 1, 10, 11, 12, 13. By default 12 and 13.
+
+  bool multiple_threads =
+      n > 1 && impl >= 10 && impl <= 13 && omp_get_max_threads() > 1;
+  if (impl >= 100) {
+    multiple_threads = false;
+    impl -= 100;
+  }
+
+  std::chrono::high_resolution_clock::time_point start =
+      std::chrono::high_resolution_clock::now();
+
+  CoarseQuantizedWithBuffer cq(cq_in);
+
+  if (!cq.done() && !multiple_threads) {
+    // we do the coarse quantization here execpt when search is
+    // sliced over threads (then it is more efficient to have each thread do
+    // its own coarse quantization)
+    // printf("(warning) repeating coarse quantization\n");
+    cq.quantize(quantizer, n, x);
+  }
+
+  std::chrono::high_resolution_clock::time_point quant_end =
+      std::chrono::high_resolution_clock::now();
+
+  // std::chrono::high_resolution_clock::time_point quant_end =
+  //     std::chrono::high_resolution_clock::now();
+
+  // if (impl == 1) {
+  //   if (is_max) {
+  //     search_implem_1<CMax<float, int64_t>>(n, x, k, distances, labels, cq,
+  //                                           scaler);
+  //   } else {
+  //     search_implem_1<CMin<float, int64_t>>(n, x, k, distances, labels, cq,
+  //                                           scaler);
+  //   }
+  // } else if (impl == 2) {
+  //   if (is_max) {
+  //     search_implem_2<CMax<uint16_t, int64_t>>(n, x, k, distances, labels,
+  //     cq,
+  //                                              scaler);
+  //   } else {
+  //     search_implem_2<CMin<uint16_t, int64_t>>(n, x, k, distances, labels,
+  //     cq,
+  //                                              scaler);
+  //   }
+  if ((impl == 1) || (impl == 2)) {
+    assert(!"implem 1 and 2 are disabled");
+  } else if (impl >= 10 && impl <= 15) {
+    size_t ndis = 0, nlist_visited = 0;
+
+    if (!multiple_threads) {
+      // clang-format off
+            if (impl == 12 || impl == 13) {
+                std::unique_ptr<RH> handler(make_knn_handler(is_max, impl, n, k, distances, labels));
+                search_implem_12_new(
+                        n, x, k, *handler.get(),
+                        cq, &ndis, &nlist_visited, scaler);
+
+            } else if (impl == 14 || impl == 15) {
+
+                search_implem_14(
+                        n, x, k, distances, labels,
+                        cq, impl, scaler);
+            } else {
+                std::unique_ptr<RH> handler(make_knn_handler(is_max, impl, n, k, distances, labels));
+                search_implem_10(
+                        n, x, *handler.get(), cq,
+                        &ndis, &nlist_visited, scaler);
+            }
+      // clang-format on
+    } else {
+      // explicitly slice over threads
+      int nslice = compute_search_nslice(this, n, cq.nprobe);
+      if (impl == 14 || impl == 15) {
+        // this might require slicing if there are too
+        // many queries (for now we keep this simple)
+        search_implem_14(n, x, k, distances, labels, cq, impl, scaler);
+      } else {
+#pragma omp parallel for reduction(+ : ndis, nlist_visited)
+        for (int slice = 0; slice < nslice; slice++) {
+          idx_t i0 = n * slice / nslice;
+          idx_t i1 = n * (slice + 1) / nslice;
+          float* dis_i = distances + i0 * k;
+          idx_t* lab_i = labels + i0 * k;
+          CoarseQuantizedSlice cq_i(cq, i0, i1);
+          if (!cq_i.done()) {
+            cq_i.quantize_slice(quantizer, x);
+          }
+          std::unique_ptr<RH> handler(
+              make_knn_handler(is_max, impl, i1 - i0, k, dis_i, lab_i));
+          // clang-format off
+                    if (impl == 12 || impl == 13) {
+                        search_implem_12_new(
+                                i1 - i0, x + i0 * d, k, *handler.get(),
+                                cq_i, &ndis, &nlist_visited, scaler);
+                    } else {
+                        search_implem_10(
+                                i1 - i0, x + i0 * d, *handler.get(),
+                                cq_i, &ndis, &nlist_visited, scaler);
+                    }
+          // clang-format on
+        }
+      }
+    }
+
+  } else {
+    // FAISS_THROW_FMT("implem %d does not exist", implem);
+    assert(!"implem does not exist");
+  }
+
+  std::chrono::high_resolution_clock::time_point end =
+      std::chrono::high_resolution_clock::now();
 }
 
 void IndexIVFFastScanL::range_search_dispatch_implem(
@@ -1038,6 +1206,177 @@ void IndexIVFFastScanL::search_implem_12(idx_t n, const float* x,
 
   // std::chrono::high_resolution_clock::time_point end =
   //     std::chrono::high_resolution_clock::now();
+}
+
+
+void IndexIVFFastScanL::search_implem_12_new(
+    idx_t n, const float* x, idx_t k, SIMDResultHandlerToFloat& handler,
+    const CoarseQuantized& cq, size_t* ndis_out, size_t* nlist_out,
+    const NormTableScaler* scaler) const {
+  if (n == 0) {  // does not work well with reservoir
+    return;
+  }
+  // FAISS_THROW_IF_NOT(bbs == 32);
+  assert(bbs == 32);
+
+  std::chrono::high_resolution_clock::time_point start =
+      std::chrono::high_resolution_clock::now();
+
+  size_t dim12 = ksub * M2;
+  AlignedTable<uint8_t> dis_tables;
+  AlignedTable<uint16_t> biases;
+  std::unique_ptr<float[]> normalizers(new float[2 * n]);
+
+  compute_LUT_uint8(n, x, cq, dis_tables, biases, normalizers.get());
+  handler.begin(skip & 16 ? nullptr : normalizers.get());
+
+  std::chrono::high_resolution_clock::time_point compute_lut_end =
+      std::chrono::high_resolution_clock::now();
+
+  struct QC {
+    int qno;      // sequence number of the query
+    int list_no;  // list to visit
+    int rank;     // this is the rank'th result of the coarse quantizer
+  };
+  bool single_LUT = !lookup_table_is_3d();
+  size_t nprobe = cq.nprobe;
+
+  // {
+  //   printf("\nbefore sorting the nprobes:");
+  //   int ij = 0;
+  //   for (int i = 0; i < n; i++) {
+  //     for (int j = 0; j < nprobe; j++) {
+  //       if (cq.ids[ij] >= 0) {
+  //         printf(" %ld", cq.ids[ij]);
+  //       }
+  //       ij++;
+  //     }
+  //   }
+  // }
+
+  std::vector<QC> qcs;
+  {
+    int ij = 0;
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < nprobe; j++) {
+        if (cq.ids[ij] >= 0) {
+          qcs.push_back(QC{i, int(cq.ids[ij]), int(j)});
+        }
+        ij++;
+      }
+    }
+    // std::sort(qcs.begin(), qcs.end(),
+    //           [](const QC& a, const QC& b) { return a.list_no < b.list_no;
+    //           });
+  }
+
+  // {
+  //   printf("\nafter sorting the nprobes:");
+  //   for (auto& qc: qcs) {
+  //     printf(" %d", qc.list_no);
+  //   }
+  // }
+
+  // prepare the result handlers
+
+  // guoyu1017 can disable
+  // int qbs2 = this->qbs2 ? this->qbs2 : 11;
+
+  // guoyu1017 can disable
+  // std::vector<uint16_t> tmp_bias;
+  // if (biases.get()) {
+  //   tmp_bias.resize(qbs2);
+  //   handler.dbias = tmp_bias.data();
+  // }
+
+  size_t ndis = 0;
+
+  size_t i0 = 0;
+  uint64_t t_copy_pack = 0, t_scan = 0;
+
+  EarlyTerminationChecker checker{k, et_params, 0};
+
+  while (i0 < qcs.size()) {
+    // find all queries that access this inverted list
+    int list_no = qcs[i0].list_no;
+    size_t i1 = i0 + 1;
+
+    // guoyu1017 can disable
+    // while (i1 < qcs.size() && i1 < i0 + qbs2) {
+    //   if (qcs[i1].list_no != list_no) {
+    //     break;
+    //   }
+    //   i1++;
+    // }
+
+    size_t list_size = invlists->list_size(list_no);
+
+    if (list_size == 0) {
+      i0 = i1;
+      continue;
+    }
+
+    // re-organize LUTs and biases into the right order
+    int nc = i1 - i0;
+
+    std::vector<int> q_map(nc), lut_entries(nc);
+    AlignedTable<uint8_t> LUT(nc * dim12);
+    memset(LUT.get(), -1, nc * dim12);
+    int qbs = pq4_preferred_qbs(nc);
+
+    for (size_t i = i0; i < i1; i++) {
+      const QC& qc = qcs[i];
+      q_map[i - i0] = qc.qno;
+      int ij = qc.qno * nprobe + qc.rank;
+      lut_entries[i - i0] = single_LUT ? qc.qno : ij;
+      // if (biases.get()) {
+      //   tmp_bias[i - i0] = biases[ij];
+      // }
+    }
+    pq4_pack_LUT_qbs_q_map(qbs, M2, dis_tables.get(), lut_entries.data(),
+                           LUT.get());
+
+    // access the inverted list
+
+    ndis += (i1 - i0) * list_size;
+
+    InvertedLists::ScopedCodes codes(invlists, list_no);
+    InvertedLists::ScopedIds ids(invlists, list_no);
+
+    // prepare the handler
+
+    handler.ntotal = list_size;
+    handler.q_map =
+        q_map.data();            // query index. 0 for just processing 1 query.
+    handler.id_map = ids.get();  // buffer to hold the ids
+
+    pq4_accumulate_loop_qbs(qbs, list_size, M2, codes.get(), LUT.get(), handler,
+                            scaler);
+    // prepare for next loop
+    i0 = i1;
+
+    // print the stats
+    // std::cout << i0-1 << ": " << handler.to_string() << "\n";
+
+    // early termination for nprobe search
+    if (use_early_termination_) {
+      int new_cands = handler.get_stats()[0];
+      checker.add_stats(new_cands);
+      if (checker.check()) {
+        break;
+      }
+    }
+
+    handler.clear_stats();
+  }
+
+  handler.end();
+
+  *ndis_out = ndis;
+  *nlist_out = nlist;
+
+  std::chrono::high_resolution_clock::time_point end =
+      std::chrono::high_resolution_clock::now();
 }
 
 void IndexIVFFastScanL::search_implem_14(idx_t n, const float* x, idx_t k,

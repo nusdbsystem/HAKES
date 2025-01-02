@@ -23,6 +23,7 @@
 #include "search-worker/index/ext/IndexRefineL.h"
 #include "search-worker/index/ext/utils.h"
 #include "search-worker/index/impl/CodePacker.h"
+#include "search-worker/index/impl/io.h"
 #include "search-worker/index/impl/io_macros.h"
 
 namespace faiss {
@@ -31,7 +32,9 @@ namespace faiss {
  * streamlined functions from index_read.cpp and index_write.cpp
  */
 
-void read_index_header(Index* idx, IOReader* f) {
+namespace {
+
+void read_index_header(Index* idx, hakes::IOReader* f) {
   READ1(idx->d);
   READ1(idx->ntotal);
   idx_t dummy;
@@ -45,7 +48,7 @@ void read_index_header(Index* idx, IOReader* f) {
   idx->verbose = false;
 }
 
-static void read_ArrayInvertedLists_sizes(IOReader* f,
+static void read_ArrayInvertedLists_sizes(hakes::IOReader* f,
                                           std::vector<size_t>& sizes) {
   uint32_t list_type;
   READ1(list_type);
@@ -71,7 +74,7 @@ static void read_ArrayInvertedLists_sizes(IOReader* f,
   }
 }
 
-InvertedLists* read_BlockInvertedLists(IOReader* f) {
+InvertedLists* read_BlockInvertedLists(hakes::IOReader* f) {
   size_t nlist, code_size, n_per_block, block_size;
   std::vector<int> load_list;
   READ1(nlist);
@@ -93,7 +96,7 @@ InvertedLists* read_BlockInvertedLists(IOReader* f) {
   return il;
 }
 
-InvertedLists* read_InvertedLists(IOReader* f, int io_flags) {
+InvertedLists* read_InvertedLists(hakes::IOReader* f, int io_flags) {
   uint32_t h;
   READ1(h);
   if (h == fourcc("il00")) {
@@ -144,7 +147,7 @@ InvertedLists* read_InvertedLists(IOReader* f, int io_flags) {
   }
 }
 
-void read_ProductQuantizer(ProductQuantizer* pq, IOReader* f) {
+void read_ProductQuantizer(ProductQuantizer* pq, hakes::IOReader* f) {
   READ1(pq->d);
   READ1(pq->M);
   READ1(pq->nbits);
@@ -152,7 +155,7 @@ void read_ProductQuantizer(ProductQuantizer* pq, IOReader* f) {
   READVECTOR(pq->centroids);
 }
 
-void write_index_header(const Index* idx, IOWriter* f) {
+void write_index_header(const Index* idx, hakes::IOWriter* f) {
   WRITE1(idx->d);
   WRITE1(idx->ntotal);
   idx_t dummy = 1 << 20;
@@ -165,7 +168,7 @@ void write_index_header(const Index* idx, IOWriter* f) {
   }
 }
 
-void write_BlockInvertedLists(const InvertedLists* ils_in, IOWriter* f) {
+void write_BlockInvertedLists(const InvertedLists* ils_in, hakes::IOWriter* f) {
   uint32_t h = fourcc("ibll");
   WRITE1(h);
   const BlockInvertedListsL* il =
@@ -183,7 +186,7 @@ void write_BlockInvertedLists(const InvertedLists* ils_in, IOWriter* f) {
   }
 }
 
-void write_InvertedLists(const InvertedLists* ils, IOWriter* f) {
+void write_InvertedLists(const InvertedLists* ils, hakes::IOWriter* f) {
   if (ils == nullptr) {
     uint32_t h = fourcc("il00");
     WRITE1(h);
@@ -235,41 +238,14 @@ void write_InvertedLists(const InvertedLists* ils, IOWriter* f) {
   }
 }
 
-void write_ProductQuantizer(const ProductQuantizer* pq, IOWriter* f) {
+void write_ProductQuantizer(const ProductQuantizer* pq, hakes::IOWriter* f) {
   WRITE1(pq->d);
   WRITE1(pq->M);
   WRITE1(pq->nbits);
   WRITEVECTOR(pq->centroids);
 }
 
-/**
- * streamlined functions from index_read.cpp and index_write.cpp
- */
-
-size_t StringIOWriter::operator()(const void* ptr, size_t size, size_t nitems) {
-  size_t bytes = size * nitems;
-  if (bytes > 0) {
-    size_t o = data.size();
-    data.resize(o + bytes);
-    memcpy(&data[o], ptr, size * nitems);
-  }
-  return nitems;
-}
-
-size_t StringIOReader::operator()(void* ptr, size_t size, size_t nitems) {
-  if (rp >= data_len) return 0;
-  size_t nremain = (data_len - rp) / size;
-  if (nremain < nitems) nitems = nremain;
-  if (size * nitems > 0) {
-    memcpy(ptr, data + rp, size * nitems);
-    rp += size * nitems;
-  }
-  return nitems;
-}
-
-namespace {
-
-void write_ivfl_header(const IndexIVFL* ivf, IOWriter* f) {
+void write_ivfl_header(const IndexIVFL* ivf, hakes::IOWriter* f) {
   write_index_header(ivf, f);
   WRITE1(ivf->nlist);
   WRITE1(ivf->nprobe);
@@ -278,7 +254,7 @@ void write_ivfl_header(const IndexIVFL* ivf, IOWriter* f) {
   write_index_ext(ivf->quantizer, f);
 }
 
-void read_ivfl_header(IndexIVFL* ivf, IOReader* f,
+void read_ivfl_header(IndexIVFL* ivf, hakes::IOReader* f,
                       std::vector<std::vector<idx_t>>* ids = nullptr) {
   read_index_header(ivf, f);
   READ1(ivf->nlist);
@@ -291,14 +267,15 @@ void read_ivfl_header(IndexIVFL* ivf, IOReader* f,
   }
 }
 
-void write_refine_map(const std::unordered_map<idx_t, idx_t>& m, IOWriter* f) {
+void write_refine_map(const std::unordered_map<idx_t, idx_t>& m,
+                      hakes::IOWriter* f) {
   std::vector<std::pair<idx_t, idx_t>> v;
   v.resize(m.size());
   std::copy(m.begin(), m.end(), v.begin());
   WRITEVECTOR(v);
 }
 
-void read_refine_map(std::unordered_map<idx_t, idx_t>* m, IOReader* f) {
+void read_refine_map(std::unordered_map<idx_t, idx_t>* m, hakes::IOReader* f) {
   std::vector<std::pair<idx_t, idx_t>> v;
   READVECTOR(v);
   m->clear();
@@ -308,7 +285,7 @@ void read_refine_map(std::unordered_map<idx_t, idx_t>* m, IOReader* f) {
   }
 }
 
-static void read_InvertedLists(IndexIVFL* ivf, IOReader* f, int io_flags) {
+void read_InvertedLists(IndexIVFL* ivf, hakes::IOReader* f, int io_flags) {
   InvertedLists* ils = read_InvertedLists(f, io_flags);
   if (ils) {
     // FAISS_THROW_IF_NOT(ils->nlist == ivf->nlist);
@@ -323,7 +300,7 @@ static void read_InvertedLists(IndexIVFL* ivf, IOReader* f, int io_flags) {
 }
 }  // anonymous namespace
 
-void write_index_ext(const Index* idx, IOWriter* f) {
+void write_index_ext(const Index* idx, hakes::IOWriter* f) {
   // check the new types before falling back to the original implementation
   if (const IndexFlatL* idxf = dynamic_cast<const IndexFlatL*>(idx)) {
     // same impl as IndexFlat, but with different fourcc for load
@@ -366,7 +343,7 @@ void write_index_ext(const Index* idx, IOWriter* f) {
   }
 }
 
-Index* read_index_ext(IOReader* f, int io_flags) {
+Index* read_index_ext(hakes::IOReader* f, int io_flags) {
   Index* idx = nullptr;
   uint32_t h;
   READ1(h);
@@ -439,7 +416,8 @@ Index* read_index_ext(IOReader* f, int io_flags) {
   return idx;
 }
 
-bool read_hakes_pretransform(IOReader* f, std::vector<VectorTransform*>* vts) {
+bool read_hakes_pretransform(hakes::IOReader* f,
+                             std::vector<VectorTransform*>* vts) {
   // open pretransform file
   int32_t num_vt;
   READ1(num_vt);
@@ -461,10 +439,12 @@ bool read_hakes_pretransform(IOReader* f, std::vector<VectorTransform*>* vts) {
     lt->is_trained = true;
     vts->emplace_back(lt);
   }
+  printf("read_hakes_pretransform: num_vt: %d\n", num_vt);
   return true;
 }
 
-IndexFlatL* read_hakes_ivf(IOReader* f, MetricType metric, bool* use_residual) {
+IndexFlatL* read_hakes_ivf(hakes::IOReader* f, MetricType metric,
+                           bool* use_residual) {
   // open ivf file
   int32_t by_residual;
   READ1(by_residual);
@@ -483,7 +463,7 @@ IndexFlatL* read_hakes_ivf(IOReader* f, MetricType metric, bool* use_residual) {
   return ivf;
 }
 
-bool read_hakes_pq(IOReader* f, ProductQuantizer* pq) {
+bool read_hakes_pq(hakes::IOReader* f, ProductQuantizer* pq) {
   // open pq file
   int32_t d, M, nbits;
   READ1(d);
@@ -499,7 +479,7 @@ bool read_hakes_pq(IOReader* f, ProductQuantizer* pq) {
   return true;
 }
 
-bool write_hakes_pretransform(IOWriter* f,
+bool write_hakes_pretransform(hakes::IOWriter* f,
                               const std::vector<VectorTransform*>* vts) {
   int32_t num_vt = vts->size();
   WRITE1(num_vt);
@@ -527,7 +507,7 @@ bool write_hakes_pretransform(IOWriter* f,
   return true;
 }
 
-bool write_hakes_ivf(IOWriter* f, const Index* idx, bool use_residual) {
+bool write_hakes_ivf(hakes::IOWriter* f, const Index* idx, bool use_residual) {
   const IndexFlatL* quantizer = dynamic_cast<const IndexFlatL*>(idx);
   if (quantizer == nullptr) {
     // printf("write_hakes_ivf: Only IndexFlatL is supported\n");
@@ -544,7 +524,7 @@ bool write_hakes_ivf(IOWriter* f, const Index* idx, bool use_residual) {
   return true;
 }
 
-bool write_hakes_pq(IOWriter* f, const ProductQuantizer& pq) {
+bool write_hakes_pq(hakes::IOWriter* f, const ProductQuantizer& pq) {
   int32_t d = pq.d;
   int32_t M = pq.M;
   int32_t nbits = pq.nbits;
@@ -556,7 +536,8 @@ bool write_hakes_pq(IOWriter* f, const ProductQuantizer& pq) {
   return true;
 }
 
-std::unordered_map<faiss::idx_t, faiss::idx_t> read_pa_mapping(IOReader* f) {
+std::unordered_map<faiss::idx_t, faiss::idx_t> read_pa_mapping(
+    hakes::IOReader* f) {
   // open pa mapping file
   std::vector<std::pair<idx_t, idx_t>> v;
   READVECTOR(v);
@@ -568,7 +549,8 @@ std::unordered_map<faiss::idx_t, faiss::idx_t> read_pa_mapping(IOReader* f) {
   return pa_mapping;
 }
 
-bool write_hakes_ivf2(IOWriter* f, const IndexFlat* idx, bool use_residual) {
+bool write_hakes_ivf2(hakes::IOWriter* f, const IndexFlat* idx,
+                      bool use_residual) {
   int32_t by_residual = use_residual ? 1 : 0;
   WRITE1(by_residual);
   int32_t nlist = idx->ntotal;
@@ -580,7 +562,7 @@ bool write_hakes_ivf2(IOWriter* f, const IndexFlat* idx, bool use_residual) {
   return true;
 }
 
-bool write_hakes_vt_quantizers(IOWriter* f,
+bool write_hakes_vt_quantizers(hakes::IOWriter* f,
                                const std::vector<VectorTransform*>& pq_vts,
                                const IndexFlat* ivf_centroids,
                                const ProductQuantizer* pq) {
@@ -609,7 +591,7 @@ bool write_hakes_vt_quantizers(IOWriter* f,
   return true;
 }
 
-Index* load_hakes_vt_quantizers(IOReader* f, MetricType metric,
+Index* load_hakes_vt_quantizers(hakes::IOReader* f, MetricType metric,
                                 std::vector<VectorTransform*>* pq_vts) {
   assert(pq_vts != nullptr);
 
@@ -661,7 +643,7 @@ Index* load_hakes_vt_quantizers(IOReader* f, MetricType metric,
 }
 
 // |---#vts----|---vts---|---ivf---|---pq---|
-bool write_hakes_index_params(IOWriter* f,
+bool write_hakes_index_params(hakes::IOWriter* f,
                               const std::vector<VectorTransform*>& vts,
                               const std::vector<VectorTransform*>& ivf_vts,
                               const IndexFlatL* ivf_centroids,
@@ -693,14 +675,14 @@ bool write_hakes_index_params(IOWriter* f,
 }
 
 // many fields of the returned index is not initialized. just the parameters
-HakesIndex* load_hakes_index_params(IOReader* f) {
+HakesIndex* load_hakes_index_params(hakes::IOReader* f) {
   HakesIndex* index = new HakesIndex();
 
   // load pq vts
   read_hakes_pretransform(f, &index->vts_);
 
   // load ivf vts
-  read_hakes_pretransform(f, &index->ivf_vts_);
+  // read_hakes_pretransform(f, &index->ivf_vts_);
 
   // load ivf
   bool use_residual;
@@ -724,13 +706,12 @@ HakesIndex* load_hakes_index_params(IOReader* f) {
   base_index->M2 = (base_index->M + 1) / 2 * 2;
   base_index->implem = 0;
   base_index->qbs2 = 0;
-
   index->base_index_.reset(base_index);
   index->cq_ = index->base_index_->quantizer;
   return index;
 }
 
-bool load_hakes_index_single_file(IOReader* f, HakesIndex* idx) {
+bool load_hakes_index_single_file(hakes::IOReader* f, HakesIndex* idx) {
   if (!read_hakes_pretransform(f, &idx->vts_)) {
     return false;
   }
@@ -741,7 +722,7 @@ bool load_hakes_index_single_file(IOReader* f, HakesIndex* idx) {
   return true;
 }
 
-bool write_hakes_index_single_file(IOWriter* f, const HakesIndex* idx) {
+bool write_hakes_index_single_file(hakes::IOWriter* f, const HakesIndex* idx) {
   if (!write_hakes_pretransform(f, &idx->vts_)) {
     return false;
   }
@@ -751,6 +732,270 @@ bool write_hakes_index_single_file(IOWriter* f, const HakesIndex* idx) {
   }
   write_index_ext(idx->refine_index_.get(), f);
   return true;
+}
+
+bool load_hakes_findex(hakes::IOReader* ff, HakesIndex* idx, bool keep_pa) {
+  if (!read_hakes_pretransform(ff, &idx->vts_)) {
+    return false;
+  }
+  idx->base_index_.reset(
+      dynamic_cast<faiss::IndexIVFPQFastScanL*>(read_index_ext(ff)));
+  return (idx->base_index_ != nullptr);
+}
+
+bool load_hakes_rindex(hakes::IOReader* rf, int d, HakesIndex* idx,
+                       bool keep_pa) {
+  idx->mapping_->load(rf);
+  idx->refine_index_.reset(
+      dynamic_cast<faiss::IndexFlatL*>(read_index_ext(rf)));
+  return true;
+}
+
+bool load_hakes_index(hakes::IOReader* ff, hakes::IOReader* rf, HakesIndex* idx,
+                      bool keep_pa) {
+  if (!load_hakes_findex(ff, idx, keep_pa)) {
+    return false;
+  }
+  if (rf) {
+    return load_hakes_rindex(rf, idx->vts_.back()->d_out, idx, keep_pa);
+  } else {
+    idx->mapping_.reset(new faiss::IDMapImpl());
+    int refine_d =
+        (idx->vts_.empty()) ? idx->base_index_->d : idx->vts_.front()->d_in;
+    idx->refine_index_.reset(
+        new faiss::IndexFlatL(refine_d, idx->base_index_->metric_type));
+    return true;
+  }
+}
+
+void write_hakes_ivf_new(hakes::IOWriter* f, const HakesIndex* idx) {
+  uint32_t d = idx->base_index_->d;
+  uint64_t ntotal = idx->base_index_->ntotal;
+  uint8_t metric_type = (idx->base_index_->metric_type == METRIC_L2) ? 0 : 1;
+  WRITE1(d);
+  WRITE1(ntotal);
+  WRITE1(metric_type);
+  WRITE1(idx->base_index_->nlist);
+
+  size_t code_size =
+      idx->base_index_->nlist * idx->base_index_->d * sizeof(float);
+  WRITEANDCHECK(
+      static_cast<IndexFlatL*>(idx->base_index_->quantizer)->codes.data(),
+      code_size);
+  printf("write_hakes_ivf_new: d: %d, ntotal: %ld, nlist: %ld\n",
+         idx->base_index_->d, idx->base_index_->ntotal, idx->base_index_->nlist);
+}
+
+bool read_hakes_ivf_new(hakes::IOReader* f, HakesIndex* idx) {
+  uint32_t d;
+  uint64_t ntotal;
+  uint8_t metric_type;
+  READ1(d);
+  READ1(ntotal);
+  READ1(metric_type);
+  idx->base_index_->d = d;
+  idx->base_index_->ntotal = ntotal;
+  faiss::MetricType metric = (metric_type == 0)
+                                 ? faiss::METRIC_L2
+                                 : faiss::METRIC_INNER_PRODUCT;
+  idx->base_index_->metric_type = metric;
+  size_t nlist;
+  READ1(nlist);
+  idx->base_index_->nlist = nlist;
+  printf("read_hakes_ivf_new: d: %d, ntotal: %ld, nlist: %ld\n", d, ntotal,
+         nlist);
+
+  IndexFlatL* quantizer = new IndexFlatL(d, metric);
+  size_t code_size = nlist * d * sizeof(float);
+  quantizer->codes.resize(code_size);
+  READANDCHECK(quantizer->codes.data(), code_size);
+  quantizer->is_trained = true;
+  quantizer->ntotal = nlist;
+  idx->base_index_->quantizer = quantizer;
+  return true;
+}
+
+void write_hakes_pq_new(hakes::IOWriter* f, const HakesIndex* idx) {
+  ProductQuantizer* pq = &idx->base_index_->pq;
+  WRITE1(pq->d);
+  WRITE1(pq->M);
+  WRITE1(pq->nbits);
+  size_t centroids_size = pq->M * pq->ksub * pq->dsub;
+  WRITEANDCHECK(pq->centroids.data(), centroids_size);
+}
+
+bool read_hakes_pq_new(hakes::IOReader* f, HakesIndex* idx) {
+  size_t d, M, nbits;
+  READ1(d);
+  READ1(M);
+  READ1(nbits);
+  printf("read_hakes_pq_new: d: %ld, M: %ld, nbits: %ld\n", d, M, nbits);
+  ProductQuantizer* pq = &idx->base_index_->pq;
+  pq->d = d;
+  pq->M = M;
+  pq->nbits = nbits;
+  pq->set_derived_values();
+  pq->train_type = ProductQuantizer::Train_hot_start;
+  size_t centroids_size = pq->M * pq->ksub * pq->dsub;
+  pq->centroids.resize(centroids_size);
+  READANDCHECK(pq->centroids.data(), centroids_size);
+  return true;
+}
+
+void write_hakes_compressed_vecs(hakes::IOWriter* f, const HakesIndex* idx) {
+  // write the compressed vectors
+  const BlockInvertedListsL* il =
+      dynamic_cast<const BlockInvertedListsL*>(idx->base_index_->invlists);
+  WRITE1(il->nlist);
+  WRITE1(il->code_size);
+  WRITE1(il->n_per_block_);
+  WRITE1(il->block_size_);
+  WRITEVECTOR(il->load_list_);
+  for (size_t i = 0; i < il->nlist; i++) {
+    il->lists_[i].write(f);
+  }
+}
+
+bool read_hakes_compressed_vecs(hakes::IOReader* f, HakesIndex* idx) {
+  size_t nlist, code_size, n_per_block, block_size;
+  std::vector<int> load_list;
+  READ1(nlist);
+  READ1(code_size);
+  READ1(n_per_block);
+  READ1(block_size);
+  printf("read_hakes_compressed_vecs: nlist: %ld, code_size: %ld, n_per_block: %ld, block_size: %ld\n",
+         nlist, code_size, n_per_block, block_size);
+
+  READVECTOR(load_list);
+  
+  BlockInvertedListsL* il = new BlockInvertedListsL(nlist, n_per_block,
+                                                    block_size);
+  for (size_t i = 0; i < nlist; i++) {
+    il->lists_[i].read(f);
+  }
+  il->init(nullptr, load_list);
+  idx->base_index_->invlists = il;
+  idx->base_index_->own_invlists = true;
+  return true;
+}
+
+void write_hakes_full_vecs(hakes::IOWriter* f, const HakesIndex* idx) {
+  uint32_t d = idx->refine_index_->d;
+  uint64_t ntotal = idx->refine_index_->ntotal;
+  uint8_t metric_type = (idx->refine_index_->metric_type == METRIC_L2) ? 0 : 1;
+  WRITE1(d);
+  WRITE1(ntotal);
+  WRITE1(metric_type);
+  WRITEXBVECTOR(idx->refine_index_->codes);
+}
+
+bool read_hakes_full_vecs(hakes::IOReader* f, HakesIndex* idx) {
+  uint32_t d;
+  uint64_t ntotal;
+  uint8_t metric_type;
+  READ1(d);
+  READ1(ntotal);
+  READ1(metric_type);
+  if (metric_type == METRIC_L2) {
+    idx->refine_index_.reset(new faiss::IndexFlatLL2(d));
+  } else if (metric_type == METRIC_INNER_PRODUCT) {
+    idx->refine_index_.reset(new faiss::IndexFlatLIP(d));
+  } else {
+    // printf("read_hakes_full_vecs: metric type not supported\n");
+    return false;
+  }
+  idx->refine_index_->ntotal = ntotal;
+  idx->refine_index_->is_trained = true;
+  idx->refine_index_->code_size = d * sizeof(float);
+  idx->refine_index_->codes.reserve(ntotal * idx->refine_index_->code_size * 2);
+  READXBVECTOR(idx->refine_index_->codes);
+  assert(idx->refine_index_->codes.size() ==
+         idx->refine_index_->ntotal * idx->refine_index_->code_size);
+}
+
+void save_hakes_findex(hakes::IOWriter* ff, const HakesIndex* idx) {
+  write_hakes_pretransform(ff, &idx->vts_);
+  printf("write_hakes_pretransform\n");
+  write_hakes_ivf_new(ff, idx);
+  printf("write_hakes_ivf_new\n");
+  write_hakes_pq_new(ff, idx);
+  printf("write_hakes_pq_new\n");
+  write_hakes_compressed_vecs(ff, idx);
+  printf("write_hakes_compressed_vecs\n");
+}
+
+void save_hakes_rindex(hakes::IOWriter* rf, const HakesIndex* idx) {
+  idx->mapping_->save(rf);
+  write_hakes_full_vecs(rf, idx);
+}
+
+void save_hakes_index(hakes::IOWriter* ff, hakes::IOWriter* rf,
+                      const HakesIndex* idx) {
+  save_hakes_findex(ff, idx);
+  save_hakes_rindex(rf, idx);
+}
+
+bool load_hakes_findex_new(hakes::IOReader* ff, HakesIndex* idx, bool keep_pa) {
+  if (!read_hakes_pretransform(ff, &idx->vts_)) {
+    return false;
+  }
+  idx->base_index_.reset(new faiss::IndexIVFPQFastScanL());
+  bool success = read_hakes_ivf_new(ff, idx) && read_hakes_pq_new(ff, idx) &&
+         read_hakes_compressed_vecs(ff, idx);
+  if (!success) {
+    return false;
+  }
+  // default field settings
+  idx->base_index_->by_residual = false;
+  idx->base_index_->nprobe = 1;
+  idx->base_index_->own_fields = true;
+  idx->base_index_->is_trained = true;
+  assert(idx->base_index_->d == idx->vts_.back()->d_out);
+  idx->base_index_->bbs = 32;
+  idx->base_index_->M = idx->base_index_->pq.M;
+  idx->base_index_->M2 = (idx->base_index_->M + 1) / 2 * 2;
+  idx->base_index_->implem = 0;
+  idx->base_index_->qbs2 = 0;
+  idx->base_index_->nbits = idx->base_index_->pq.nbits;
+  idx->base_index_->ksub = 1 << idx->base_index_->pq.nbits;
+  idx->base_index_->code_size = idx->base_index_->pq.code_size;
+  idx->base_index_->init_code_packer();
+  idx->base_index_->precompute_table();
+  printf("code size: %ld\n", idx->base_index_->code_size);
+  printf("bbs: %ld\n", idx->base_index_->bbs);
+  printf("M2: %ld\n", idx->base_index_->M2);
+  printf("implem: %ld\n", idx->base_index_->implem);
+  printf("qbs2: %ld\n", idx->base_index_->qbs2);
+  printf("nbits: %ld\n", idx->base_index_->nbits);
+  printf("ksub: %ld\n", idx->base_index_->ksub);
+  printf("nlist: %ld\n", idx->base_index_->nlist);
+  printf("ntotal: %ld\n", idx->base_index_->ntotal);
+  printf("d: %ld\n", idx->base_index_->d);
+
+  return true;
+}
+
+bool load_hakes_rindex_new(hakes::IOReader* rf, int d, HakesIndex* idx,
+                           bool keep_pa) {
+  idx->mapping_->load(rf);
+  return read_hakes_full_vecs(rf, idx);
+}
+
+bool load_hakes_index_new(hakes::IOReader* ff, hakes::IOReader* rf,
+                          HakesIndex* idx, bool keep_pa) {
+  if (!load_hakes_findex_new(ff, idx, keep_pa)) {
+    return false;
+  }
+  if (rf) {
+    return load_hakes_rindex_new(rf, idx->vts_.back()->d_out, idx, keep_pa);
+  } else {
+    idx->mapping_.reset(new faiss::IDMapImpl());
+    int refine_d =
+        (idx->vts_.empty()) ? idx->base_index_->d : idx->vts_.front()->d_in;
+    idx->refine_index_.reset(
+        new faiss::IndexFlatL(refine_d, idx->base_index_->metric_type));
+    return true;
+  }
 }
 
 }  // namespace faiss

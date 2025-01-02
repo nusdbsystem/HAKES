@@ -21,7 +21,7 @@
 
 #include <atomic>
 
-#include "search-worker/index/impl/io.h"
+#include "utils/io.h"
 #include "search-worker/index/invlists/InvertedLists.h"
 #include "search-worker/index/utils/AlignedTable.h"
 
@@ -90,8 +90,8 @@ struct InvListUnit {
   inline void lock_exclusive() const { pthread_rwlock_wrlock(&mu_); }
   inline void unlock_exclusive() const { pthread_rwlock_unlock(&mu_); }
 
-  void read(IOReader* f);
-  void write(IOWriter* f) const;
+  void read(hakes::IOReader* f);
+  void write(hakes::IOWriter* f) const;
 };
 
 /** Inverted Lists that are organized by blocks.

@@ -1,3 +1,19 @@
+/*
+ * Copyright 2024 The HAKES Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 /**
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
@@ -12,7 +28,10 @@
 #ifndef HAKES_SEARCHWORKER_INDEX_IMPL_RESULTHANDLER_H_
 #define HAKES_SEARCHWORKER_INDEX_IMPL_RESULTHANDLER_H_
 
+#include <sstream>
+
 #include "search-worker/index/impl/AuxIndexStructures.h"
+#include "search-worker/index/utils/partitioning.h"
 // #include <patched-index/utils/Heap.h>
 // #include <faiss/utils/partitioning.h>
 
@@ -274,186 +293,211 @@ struct HeapBlockResultHandler : BlockResultHandler<C> {
  * the capacity is reached, a new threshold is chosen by partitionning the
  * distance array.
  *****************************************************************/
+/// Reservoir for a single query
+template <class C>
+struct ReservoirTopN : ResultHandler<C> {
+    using T = typename C::T;
+    using TI = typename C::TI;
+    using ResultHandler<C>::threshold;
 
-// /// Reservoir for a single query
-// template <class C>
-// struct ReservoirTopN : ResultHandler<C> {
-//     using T = typename C::T;
-//     using TI = typename C::TI;
-//     using ResultHandler<C>::threshold;
+    T* vals;
+    TI* ids;
 
-//     T* vals;
-//     TI* ids;
+    size_t i;        // number of stored elements
+    size_t n;        // number of requested elements
+    size_t capacity; // size of storage
 
-//     size_t i;        // number of stored elements
-//     size_t n;        // number of requested elements
-//     size_t capacity; // size of storage
+    size_t added;
 
-//     ReservoirTopN() {}
+    ReservoirTopN() {}
 
-//     ReservoirTopN(size_t n, size_t capacity, T* vals, TI* ids)
-//             : vals(vals), ids(ids), i(0), n(n), capacity(capacity) {
-//         assert(n < capacity);
-//         threshold = C::neutral();
-//     }
+    ReservoirTopN(size_t n, size_t capacity, T* vals, TI* ids)
+            : vals(vals), ids(ids), i(0), n(n), capacity(capacity), added(0) {
+        assert(n < capacity);
+        threshold = C::neutral();
+    }
 
-//     bool add_result(T val, TI id) final {
-//         bool updated_threshold = false;
-//         if (C::cmp(threshold, val)) {
-//             if (i == capacity) {
-//                 shrink_fuzzy();
-//                 updated_threshold = true;
-//             }
-//             vals[i] = val;
-//             ids[i] = id;
-//             i++;
-//         }
-//         return updated_threshold;
-//     }
+    inline std::string to_string(bool all_data = false) const {
+        std::stringstream s;
+        s << "ReservoirTopN: n=" << n << " capacity=" << capacity
+          << " i=" << i << " threshold=" << threshold << " added=" << added;
+        if (all_data) {
+            s << " vals=[";
+            for (size_t j = 0; j < i; j++) {
+                s << vals[j] << " ";
+            }
+            s << "] ids=[";
+            for (size_t j = 0; j < i; j++) {
+                s << ids[j] << " ";
+            }
+            s << "]";
+        }
+        return s.str();
+    }
 
-//     void add(T val, TI id) {
-//         add_result(val, id);
-//     }
+    void clear_added() {
+        added = 0;
+    }
 
-//     // reduce storage from capacity to anything
-//     // between n and (capacity + n) / 2
-//     void shrink_fuzzy() {
-//         assert(i == capacity);
+    bool add_result(T val, TI id) final {
+        bool updated_threshold = false;
+        if (C::cmp(threshold, val)) {
+            // add to reservoir only if above threshold (CMin -> larger than threshold).
+            if (i == capacity) {
+                shrink_fuzzy();
+                updated_threshold = true;
+            }
+            vals[i] = val;
+            ids[i] = id;
+            i++;
+            added++;
+        }
+        return updated_threshold;
+    }
 
-//         threshold = partition_fuzzy<C>(
-//                 vals, ids, capacity, n, (capacity + n) / 2, &i);
-//     }
+    void add(T val, TI id) {
+        add_result(val, id);
+    }
 
-//     void shrink() {
-//         threshold = partition<C>(vals, ids, i, n);
-//         i = n;
-//     }
+    // reduce storage from capacity to anything
+    // between n and (capacity + n) / 2
+    void shrink_fuzzy() {
+        assert(i == capacity);
 
-//     void to_result(T* heap_dis, TI* heap_ids) const {
-//         for (int j = 0; j < std::min(i, n); j++) {
-//             heap_push<C>(j + 1, heap_dis, heap_ids, vals[j], ids[j]);
-//         }
+        threshold = partition_fuzzy<C>(
+                vals, ids, capacity, n, (capacity + n) / 2, &i);
+    }
 
-//         if (i < n) {
-//             heap_reorder<C>(i, heap_dis, heap_ids);
-//             // add empty results
-//             heap_heapify<C>(n - i, heap_dis + i, heap_ids + i);
-//         } else {
-//             // add remaining elements
-//             heap_addn<C>(n, heap_dis, heap_ids, vals + n, ids + n, i - n);
-//             heap_reorder<C>(n, heap_dis, heap_ids);
-//         }
-//     }
-// };
+    void shrink() {
+        threshold = partition<C>(vals, ids, i, n);
+        i = n;
+    }
 
-// template <class C>
-// struct ReservoirBlockResultHandler : BlockResultHandler<C> {
-//     using T = typename C::T;
-//     using TI = typename C::TI;
-//     using BlockResultHandler<C>::i0;
-//     using BlockResultHandler<C>::i1;
+    void to_result(T* heap_dis, TI* heap_ids) const {
+        for (int j = 0; j < std::min(i, n); j++) {
+            heap_push<C>(j + 1, heap_dis, heap_ids, vals[j], ids[j]);
+        }
 
-//     T* heap_dis_tab;
-//     TI* heap_ids_tab;
+        if (i < n) {
+            heap_reorder<C>(i, heap_dis, heap_ids);
+            // add empty results
+            heap_heapify<C>(n - i, heap_dis + i, heap_ids + i);
+        } else {
+            // add remaining elements
+            heap_addn<C>(n, heap_dis, heap_ids, vals + n, ids + n, i - n);
+            heap_reorder<C>(n, heap_dis, heap_ids);
+        }
+    }
+};
 
-//     int64_t k;       // number of results to keep
-//     size_t capacity; // capacity of the reservoirs
+template <class C>
+struct ReservoirBlockResultHandler : BlockResultHandler<C> {
+    using T = typename C::T;
+    using TI = typename C::TI;
+    using BlockResultHandler<C>::i0;
+    using BlockResultHandler<C>::i1;
 
-//     ReservoirBlockResultHandler(
-//             size_t nq,
-//             T* heap_dis_tab,
-//             TI* heap_ids_tab,
-//             size_t k)
-//             : BlockResultHandler<C>(nq),
-//               heap_dis_tab(heap_dis_tab),
-//               heap_ids_tab(heap_ids_tab),
-//               k(k) {
-//         // double then round up to multiple of 16 (for SIMD alignment)
-//         capacity = (2 * k + 15) & ~15;
-//     }
+    T* heap_dis_tab;
+    TI* heap_ids_tab;
 
-//     /******************************************************
-//      * API for 1 result at a time (each SingleResultHandler is
-//      * called from 1 thread)
-//      */
+    int64_t k;       // number of results to keep
+    size_t capacity; // capacity of the reservoirs
 
-//     struct SingleResultHandler : ReservoirTopN<C> {
-//         ReservoirBlockResultHandler& hr;
+    ReservoirBlockResultHandler(
+            size_t nq,
+            T* heap_dis_tab,
+            TI* heap_ids_tab,
+            size_t k)
+            : BlockResultHandler<C>(nq),
+              heap_dis_tab(heap_dis_tab),
+              heap_ids_tab(heap_ids_tab),
+              k(k) {
+        // double then round up to multiple of 16 (for SIMD alignment)
+        capacity = (2 * k + 15) & ~15;
+    }
 
-//         std::vector<T> reservoir_dis;
-//         std::vector<TI> reservoir_ids;
+    /******************************************************
+     * API for 1 result at a time (each SingleResultHandler is
+     * called from 1 thread)
+     */
 
-//         explicit SingleResultHandler(ReservoirBlockResultHandler& hr)
-//                 : ReservoirTopN<C>(hr.k, hr.capacity, nullptr, nullptr),
-//                   hr(hr) {}
+    struct SingleResultHandler : ReservoirTopN<C> {
+        ReservoirBlockResultHandler& hr;
 
-//         size_t qno;
+        std::vector<T> reservoir_dis;
+        std::vector<TI> reservoir_ids;
 
-//         /// begin results for query # i
-//         void begin(size_t qno_2) {
-//             reservoir_dis.resize(hr.capacity);
-//             reservoir_ids.resize(hr.capacity);
-//             this->vals = reservoir_dis.data();
-//             this->ids = reservoir_ids.data();
-//             this->i = 0; // size of reservoir
-//             this->threshold = C::neutral();
-//             this->qno = qno_2;
-//         }
+        explicit SingleResultHandler(ReservoirBlockResultHandler& hr)
+                : ReservoirTopN<C>(hr.k, hr.capacity, nullptr, nullptr),
+                  hr(hr) {}
 
-//         /// series of results for query qno is done
-//         void end() {
-//             T* heap_dis = hr.heap_dis_tab + qno * hr.k;
-//             TI* heap_ids = hr.heap_ids_tab + qno * hr.k;
-//             this->to_result(heap_dis, heap_ids);
-//         }
-//     };
+        size_t qno;
 
-//     /******************************************************
-//      * API for multiple results (called from 1 thread)
-//      */
+        /// begin results for query # i
+        void begin(size_t qno_2) {
+            reservoir_dis.resize(hr.capacity);
+            reservoir_ids.resize(hr.capacity);
+            this->vals = reservoir_dis.data();
+            this->ids = reservoir_ids.data();
+            this->i = 0; // size of reservoir
+            this->threshold = C::neutral();
+            this->qno = qno_2;
+        }
 
-//     std::vector<T> reservoir_dis;
-//     std::vector<TI> reservoir_ids;
-//     std::vector<ReservoirTopN<C>> reservoirs;
+        /// series of results for query qno is done
+        void end() {
+            T* heap_dis = hr.heap_dis_tab + qno * hr.k;
+            TI* heap_ids = hr.heap_ids_tab + qno * hr.k;
+            this->to_result(heap_dis, heap_ids);
+        }
+    };
 
-//     /// begin
-//     void begin_multiple(size_t i0_2, size_t i1_2) {
-//         this->i0 = i0_2;
-//         this->i1 = i1_2;
-//         reservoir_dis.resize((i1 - i0) * capacity);
-//         reservoir_ids.resize((i1 - i0) * capacity);
-//         reservoirs.clear();
-//         for (size_t i = i0_2; i < i1_2; i++) {
-//             reservoirs.emplace_back(
-//                     k,
-//                     capacity,
-//                     reservoir_dis.data() + (i - i0_2) * capacity,
-//                     reservoir_ids.data() + (i - i0_2) * capacity);
-//         }
-//     }
+    /******************************************************
+     * API for multiple results (called from 1 thread)
+     */
 
-//     /// add results for query i0..i1 and j0..j1
-//     void add_results(size_t j0, size_t j1, const T* dis_tab) {
+    std::vector<T> reservoir_dis;
+    std::vector<TI> reservoir_ids;
+    std::vector<ReservoirTopN<C>> reservoirs;
+
+    /// begin
+    void begin_multiple(size_t i0_2, size_t i1_2) {
+        this->i0 = i0_2;
+        this->i1 = i1_2;
+        reservoir_dis.resize((i1 - i0) * capacity);
+        reservoir_ids.resize((i1 - i0) * capacity);
+        reservoirs.clear();
+        for (size_t i = i0_2; i < i1_2; i++) {
+            reservoirs.emplace_back(
+                    k,
+                    capacity,
+                    reservoir_dis.data() + (i - i0_2) * capacity,
+                    reservoir_ids.data() + (i - i0_2) * capacity);
+        }
+    }
+
+    /// add results for query i0..i1 and j0..j1
+    void add_results(size_t j0, size_t j1, const T* dis_tab) {
 // #pragma omp parallel for
-//         for (int64_t i = i0; i < i1; i++) {
-//             ReservoirTopN<C>& reservoir = reservoirs[i - i0];
-//             const T* dis_tab_i = dis_tab + (j1 - j0) * (i - i0) - j0;
-//             for (size_t j = j0; j < j1; j++) {
-//                 T dis = dis_tab_i[j];
-//                 reservoir.add_result(dis, j);
-//             }
-//         }
-//     }
+        for (int64_t i = i0; i < i1; i++) {
+            ReservoirTopN<C>& reservoir = reservoirs[i - i0];
+            const T* dis_tab_i = dis_tab + (j1 - j0) * (i - i0) - j0;
+            for (size_t j = j0; j < j1; j++) {
+                T dis = dis_tab_i[j];
+                reservoir.add_result(dis, j);
+            }
+        }
+    }
 
-//     /// series of results for queries i0..i1 is done
-//     void end_multiple() final {
-//         // maybe parallel for
-//         for (size_t i = i0; i < i1; i++) {
-//             reservoirs[i - i0].to_result(
-//                     heap_dis_tab + i * k, heap_ids_tab + i * k);
-//         }
-//     }
-// };
+    /// series of results for queries i0..i1 is done
+    void end_multiple() final {
+        // maybe parallel for
+        for (size_t i = i0; i < i1; i++) {
+            reservoirs[i - i0].to_result(
+                    heap_dis_tab + i * k, heap_ids_tab + i * k);
+        }
+    }
+};
 
 /*****************************************************************
  * Result handler for range searches

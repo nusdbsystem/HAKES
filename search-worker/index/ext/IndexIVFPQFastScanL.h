@@ -51,6 +51,8 @@ namespace faiss {
 
 struct IndexIVFPQFastScanL : IndexIVFFastScanL {
   ProductQuantizer pq;  ///< produces the codes
+  bool has_q_pq = false;
+  ProductQuantizer q_pq;  ///< produces the query codes
 
   /// precomputed tables management
   int use_precomputed_table = 0;

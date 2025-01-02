@@ -19,9 +19,10 @@
 
 #include <memory>
 #include <unordered_map>
+#include <vector>
 
 #include "search-worker/index/MetricType.h"
-#include "search-worker/index/impl/io.h"
+#include "utils/io.h"
 
 namespace faiss {
 
@@ -44,9 +45,9 @@ class IDMap {
 
   virtual bool reset() = 0;
 
-  virtual bool load(IOReader* f, int io_flags = 0) = 0;
+  virtual bool load(hakes::IOReader* f, int io_flags = 0) = 0;
 
-  virtual bool save(IOWriter* f) const = 0;
+  virtual bool save(hakes::IOWriter* f) const = 0;
 
   virtual std::string to_string() const { return "IDMap"; };
 };
@@ -73,8 +74,8 @@ class IDMapImpl : public IDMap {
 
   bool reset() override;
 
-  bool load(IOReader* f, int io_flags = 0) override;
-  bool save(IOWriter* f) const override;
+  bool load(hakes::IOReader* f, int io_flags = 0) override;
+  bool save(hakes::IOWriter* f) const override;
 
   std::string to_string() const override;
 

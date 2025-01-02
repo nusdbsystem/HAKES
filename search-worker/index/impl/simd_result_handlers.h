@@ -1,3 +1,19 @@
+/*
+ * Copyright 2024 The HAKES Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 /**
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
@@ -69,6 +85,16 @@ struct SIMDResultHandlerToFloat : SIMDResultHandler {
     // normalizers are deallocated
     virtual void end() {
         normalizers = nullptr;
+    }
+
+    virtual std::vector<int> get_stats() const {
+        return {1<<12};
+    }
+
+    virtual void clear_stats() {}
+
+    virtual std::string to_string(bool all_data = false) const {
+        return "SIMDResultHandlerToFloat";
     }
 };
 
@@ -368,114 +394,135 @@ struct HeapHandler : ResultHandlerCompare<C, with_id_map> {
     }
 };
 
-// /** Simple top-N implementation using a reservoir.
-//  *
-//  * Results are stored when they are below the threshold until the capacity is
-//  * reached. Then a partition sort is used to update the threshold. */
+/** Simple top-N implementation using a reservoir.
+ *
+ * Results are stored when they are below the threshold until the capacity is
+ * reached. Then a partition sort is used to update the threshold. */
 
-// /** Handler built from several ReservoirTopN (one per query) */
-// template <class C, bool with_id_map = false>
-// struct ReservoirHandler : ResultHandlerCompare<C, with_id_map> {
-//     using T = typename C::T;
-//     using TI = typename C::TI;
-//     using RHC = ResultHandlerCompare<C, with_id_map>;
-//     using RHC::normalizers;
+/** Handler built from several ReservoirTopN (one per query) */
+template <class C, bool with_id_map = false>
+struct ReservoirHandler : ResultHandlerCompare<C, with_id_map> {
+    using T = typename C::T;
+    using TI = typename C::TI;
+    using RHC = ResultHandlerCompare<C, with_id_map>;
+    using RHC::normalizers;
 
-//     size_t capacity; // rounded up to multiple of 16
+    size_t capacity; // rounded up to multiple of 16
 
-//     // where the final results will be written
-//     float* dis;
-//     int64_t* ids;
+    // where the final results will be written
+    float* dis;
+    int64_t* ids;
 
-//     std::vector<TI> all_ids;
-//     AlignedTable<T> all_vals;
-//     std::vector<ReservoirTopN<C>> reservoirs;
+    std::vector<TI> all_ids;
+    AlignedTable<T> all_vals;
+    std::vector<ReservoirTopN<C>> reservoirs;
 
-//     ReservoirHandler(
-//             size_t nq,
-//             size_t ntotal,
-//             size_t k,
-//             size_t cap,
-//             float* dis,
-//             int64_t* ids)
-//             : RHC(nq, ntotal), capacity((cap + 15) & ~15), dis(dis), ids(ids) {
-//         assert(capacity % 16 == 0);
-//         all_ids.resize(nq * capacity);
-//         all_vals.resize(nq * capacity);
-//         for (size_t q = 0; q < nq; q++) {
-//             reservoirs.emplace_back(
-//                     k,
-//                     capacity,
-//                     all_vals.get() + q * capacity,
-//                     all_ids.data() + q * capacity);
-//         }
-//     }
+    ReservoirHandler(
+            size_t nq,
+            size_t ntotal,
+            size_t k,
+            size_t cap,
+            float* dis,
+            int64_t* ids)
+            : RHC(nq, ntotal), capacity((cap + 15) & ~15), dis(dis), ids(ids) {
+        assert(capacity % 16 == 0);
+        all_ids.resize(nq * capacity);
+        all_vals.resize(nq * capacity);
+        for (size_t q = 0; q < nq; q++) {
+            reservoirs.emplace_back(
+                    k,
+                    capacity,
+                    all_vals.get() + q * capacity,
+                    all_ids.data() + q * capacity);
+        }
+    }
 
-//     void handle(size_t q, size_t b, simd16uint16 d0, simd16uint16 d1) final {
-//         if (this->disable) {
-//             return;
-//         }
-//         this->adjust_with_origin(q, d0, d1);
+    void handle(size_t q, size_t b, simd16uint16 d0, simd16uint16 d1) final {
+        if (this->disable) {
+            return;
+        }
+        this->adjust_with_origin(q, d0, d1);
 
-//         ReservoirTopN<C>& res = reservoirs[q];
-//         uint32_t lt_mask = this->get_lt_mask(res.threshold, b, d0, d1);
+        ReservoirTopN<C>& res = reservoirs[q];
+        uint32_t lt_mask = this->get_lt_mask(res.threshold, b, d0, d1);
 
-//         if (!lt_mask) {
-//             return;
-//         }
-//         // ALIGNED(32) uint16_t d32tab[32];
-//         uint16_t d32tab[32];
-//         d0.store(d32tab);
-//         d1.store(d32tab + 16);
+        if (!lt_mask) {
+            return;
+        }
+        // ALIGNED(32) uint16_t d32tab[32];
+        uint16_t d32tab[32];
+        d0.store(d32tab);
+        d1.store(d32tab + 16);
 
-//         while (lt_mask) {
-//             // find first non-zero
-//             int j = __builtin_ctz(lt_mask);
-//             lt_mask -= 1 << j;
-//             T dis = d32tab[j];
-//             res.add(dis, this->adjust_id(b, j));
-//         }
-//     }
+        while (lt_mask) {
+            // find first non-zero
+            int j = __builtin_ctz(lt_mask);
+            lt_mask -= 1 << j;
+            T dis = d32tab[j];
+            res.add(dis, this->adjust_id(b, j));
+        }
+    }
 
-//     void end() override {
-//         using Cf = typename std::conditional<
-//                 C::is_max,
-//                 CMax<float, int64_t>,
-//                 CMin<float, int64_t>>::type;
+    void end() override {
+        using Cf = typename std::conditional<
+                C::is_max,
+                CMax<float, int64_t>,
+                CMin<float, int64_t>>::type;
 
-//         std::vector<int> perm(reservoirs[0].n);
-//         for (int q = 0; q < reservoirs.size(); q++) {
-//             ReservoirTopN<C>& res = reservoirs[q];
-//             size_t n = res.n;
+        std::vector<int> perm(reservoirs[0].n);
+        for (int q = 0; q < reservoirs.size(); q++) {
+            ReservoirTopN<C>& res = reservoirs[q];
+            size_t n = res.n;
 
-//             if (res.i > res.n) {
-//                 res.shrink();
-//             }
-//             int64_t* heap_ids = ids + q * n;
-//             float* heap_dis = dis + q * n;
+            if (res.i > res.n) {
+                res.shrink();
+            }
+            int64_t* heap_ids = ids + q * n;
+            float* heap_dis = dis + q * n;
 
-//             float one_a = 1.0, b = 0.0;
-//             if (normalizers) {
-//                 one_a = 1 / normalizers[2 * q];
-//                 b = normalizers[2 * q + 1];
-//             }
-//             for (int i = 0; i < res.i; i++) {
-//                 perm[i] = i;
-//             }
-//             // indirect sort of result arrays
-//             std::sort(perm.begin(), perm.begin() + res.i, [&res](int i, int j) {
-//                 return C::cmp(res.vals[j], res.vals[i]);
-//             });
-//             for (int i = 0; i < res.i; i++) {
-//                 heap_dis[i] = res.vals[perm[i]] * one_a + b;
-//                 heap_ids[i] = res.ids[perm[i]];
-//             }
+            float one_a = 1.0, b = 0.0;
+            if (normalizers) {
+                one_a = 1 / normalizers[2 * q];
+                b = normalizers[2 * q + 1];
+            }
+            for (int i = 0; i < res.i; i++) {
+                perm[i] = i;
+            }
+            // indirect sort of result arrays
+            std::sort(perm.begin(), perm.begin() + res.i, [&res](int i, int j) {
+                return C::cmp(res.vals[j], res.vals[i]);
+            });
+            if (normalizers) {
+                for (int i = 0; i < res.i; i++) {
+                    heap_dis[i] = res.vals[perm[i]] * one_a + b;
+                    heap_ids[i] = res.ids[perm[i]];
+                }
+            } else {
+                for (int i = 0; i < res.i; i++) {
+                    heap_dis[i] = res.vals[perm[i]];
+                    heap_ids[i] = res.ids[perm[i]];
+                }
+            }
 
-//             // possibly add empty results
-//             heap_heapify<Cf>(n - res.i, heap_dis + res.i, heap_ids + res.i);
-//         }
-//     }
-// };
+            // possibly add empty results
+            heap_heapify<Cf>(n - res.i, heap_dis + res.i, heap_ids + res.i);
+        }
+    }
+
+    inline std::vector<int> get_stats() const override {
+        std::vector<int> added(reservoirs.size());
+        for (size_t q = 0; q < reservoirs.size(); q++) {
+            added[q] = reservoirs[q].added;
+        }
+        return added;
+    }
+
+    inline void clear_stats() override {
+        for (auto& res: reservoirs) {
+            res.clear_added();
+        }
+    }
+};
 
 /** Result hanlder for range search. The difficulty is that the range distances
  * have to be scaled using the scaler.

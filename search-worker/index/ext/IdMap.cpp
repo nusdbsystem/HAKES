@@ -65,14 +65,14 @@ bool IDMapImpl::reset() {
 
 namespace {
 
-void write_map(const std::unordered_map<idx_t, idx_t>& m, IOWriter* f) {
+void write_map(const std::unordered_map<idx_t, idx_t>& m, hakes::IOWriter* f) {
   std::vector<std::pair<idx_t, idx_t>> v;
   v.resize(m.size());
   std::copy(m.begin(), m.end(), v.begin());
   WRITEVECTOR(v);
 }
 
-void read_map(std::unordered_map<idx_t, idx_t>* m, IOReader* f) {
+void read_map(std::unordered_map<idx_t, idx_t>* m, hakes::IOReader* f) {
   std::vector<std::pair<idx_t, idx_t>> v;
   READVECTOR(v);
   m->clear();
@@ -84,14 +84,14 @@ void read_map(std::unordered_map<idx_t, idx_t>* m, IOReader* f) {
 
 }  // anonymous namespace
 
-bool IDMapImpl::load(IOReader* f, int io_flags) {
+bool IDMapImpl::load(hakes::IOReader* f, int io_flags) {
   read_map(&off_to_idx_, f);
   read_map(&idx_to_off_, f);
   ntotal_ = off_to_idx_.size();
   return true;
 }
 
-bool IDMapImpl::save(IOWriter* f) const {
+bool IDMapImpl::save(hakes::IOWriter* f) const {
   write_map(off_to_idx_, f);
   write_map(idx_to_off_, f);
   return true;

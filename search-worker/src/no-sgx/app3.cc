@@ -97,21 +97,24 @@ int main(int argc, char* argv[]) {
   printf("content_len: %ld\n", content_len);
 
   {
-    bool status = worker0.Initialize(content.get(), content_len, 3, 0);
+    auto r = hakes::StringIOReader(content.get(), content_len);
+    bool status = worker0.Initialize(&r, nullptr, nullptr, false, 3, 0);
     if (!status) {
       printf("Failed to initialize\n");
       exit(1);
     }
   }
   {
-    bool status = worker1.Initialize(content.get(), content_len, 3, 1);
+    auto r = hakes::StringIOReader(content.get(), content_len);
+    bool status = worker1.Initialize(&r, nullptr, nullptr, false, 3, 1);
     if (!status) {
       printf("Failed to initialize\n");
       exit(1);
     }
   }
   {
-    bool status = worker2.Initialize(content.get(), content_len, 3, 2);
+    auto r = hakes::StringIOReader(content.get(), content_len);
+    bool status = worker2.Initialize(&r, nullptr, nullptr, false, 3, 2);
     if (!status) {
       printf("Failed to initialize\n");
       exit(1);
@@ -320,7 +323,6 @@ int main(int argc, char* argv[]) {
   worker0.Close();
   worker1.Close();
   worker2.Close();
-
 
   delete[] data;
   delete[] query;
