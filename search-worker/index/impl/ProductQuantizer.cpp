@@ -20,27 +20,34 @@
 #include "search-worker/index/VectorTransform.h"
 // #include <faiss/impl/FaissAssert.h>
 #include "search-worker/index/utils/distances.h"
-#include "search-worker/index/blas/sgemm.h"
 
-// extern "C" {
+#ifdef USE_SGX
+// #include "search-worker/index/blas/sgemm.h"
+#else // USE_SGX
+extern "C" {
 
-// /* declare BLAS functions, see http://www.netlib.org/clapack/cblas/ */
+#ifndef FINTEGER
+#define FINTEGER long
+#endif
 
-// int sgemm_(
-//         const char* transa,
-//         const char* transb,
-//         FINTEGER* m,
-//         FINTEGER* n,
-//         FINTEGER* k,
-//         const float* alpha,
-//         const float* a,
-//         FINTEGER* lda,
-//         const float* b,
-//         FINTEGER* ldb,
-//         float* beta,
-//         float* c,
-//         FINTEGER* ldc);
-// }
+/* declare BLAS functions, see http://www.netlib.org/clapack/cblas/ */
+
+int sgemm_(
+        const char* transa,
+        const char* transb,
+        FINTEGER* m,
+        FINTEGER* n,
+        FINTEGER* k,
+        const float* alpha,
+        const float* a,
+        FINTEGER* lda,
+        const float* b,
+        FINTEGER* ldb,
+        float* beta,
+        float* c,
+        FINTEGER* ldc);
+}
+#endif // USE_SGX
 
 namespace faiss {
 

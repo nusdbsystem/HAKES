@@ -20,17 +20,17 @@
 
 #include "message/keyservice_worker.h"
 #include "message/searchservice.h"
-#include "ratls-channel/common/channel_client.h"
 #include "search-worker/common/workerImpl.h"
 #include "search-worker/index/ext/IndexFlatL.h"
 #include "search-worker/index/ext/IndexIVFPQFastScanL.h"
-#include "search-worker/index/ext/index_io_ext.h"
 #include "utils/base64.h"
 #include "utils/cache.h"
 #include "utils/hexutil.h"
+#include "utils/io.h"
 
 #ifdef USE_SGX
 #include "Enclave_t.h"
+#include "ratls-channel/common/channel_client.h"
 #include "utils/tcrypto_ext.h"
 #endif  // USE_SGX
 
@@ -211,12 +211,12 @@ std::string encode_hex_floats(const float* vecs, size_t count) {
 
 namespace search_worker {
 
-bool WorkerImpl::Initialize(const char* index_data, size_t index_len,
+bool WorkerImpl::Initialize(hakes::IOReader* ff, hakes::IOReader* rf,
+                            hakes::IOReader* uf, bool keep_pa,
                             int cluster_size, int server_id) {
   // index_.reset(new faiss::IndexFlatL(4, faiss::METRIC_INNER_PRODUCT));
   index_.reset(new faiss::HakesIndex());
-  faiss::StringIOReader reader(index_data, index_len);
-  index_->Initialize(&reader, false);
+  index_->Initialize(ff, rf, uf, keep_pa);
   index_->base_index_->use_balanced_assign_ = false;
   cluster_size_ = cluster_size;
   server_id_ = server_id;

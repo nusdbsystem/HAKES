@@ -53,7 +53,7 @@ struct IndexFlatL : IndexFlatCodesL {
    *                corresponding output distances, size n * k
    */
   void compute_distance_subset(idx_t n, const float* x, idx_t k,
-                               float* distances, const idx_t* labels) const;
+                               float* distances, const idx_t* labels, const SearchParameters* params = nullptr) const;
 
   // it will obtain shared lock, so call release_xb() after use
   const float* get_xb() const {

@@ -94,7 +94,8 @@ int main(int argc, char* argv[]) {
       hakes::ReadFileToCharArray(cfg.index_path.c_str(), &content_len);
   printf("content_len: %ld\n", content_len);
 
-  bool status = worker.Initialize(content.get(), content_len, 1, 0);
+  auto r = hakes::StringIOReader(content.get(), content_len);
+  bool status = worker.Initialize(&r, nullptr, nullptr, false, 1, 0);
   if (!status) {
     printf("Failed to initialize\n");
     exit(1);
@@ -134,8 +135,7 @@ int main(int argc, char* argv[]) {
   // search the first vector
   hakes::SearchWorkerSearchRequest search_req;
   search_req.d = cfg.data_dim;
-  search_req.vecs =
-      hakes::encode_hex_floats(query, cfg.data_dim);
+  search_req.vecs = hakes::encode_hex_floats(query, cfg.data_dim);
   search_req.k = cfg.search_k;
   search_req.nprobe = cfg.nprobe;
   search_req.k_factor = cfg.k_factor;
@@ -156,7 +156,8 @@ int main(int argc, char* argv[]) {
 
   // decode the search result
   hakes::SearchWorkerSearchResponse search_resp;
-  status = hakes::decode_search_worker_search_response(resp.get(), &search_resp);
+  status =
+      hakes::decode_search_worker_search_response(resp.get(), &search_resp);
   if (!status) {
     printf("Failed to decode search result\n");
     exit(1);
@@ -183,7 +184,7 @@ int main(int argc, char* argv[]) {
   auto resp_rerank = std::unique_ptr<char[]>(new char[4096 * 4096]);
   status = worker.Rerank(encoded_rerank_req.c_str(), encoded_rerank_req.size(),
                          resp_rerank.get(), 4096 * 4096);
-  
+
   if (status) {
     printf("Output: %s\n", resp_rerank.get());
   } else {
@@ -193,7 +194,8 @@ int main(int argc, char* argv[]) {
 
   // decode the rerank result
   hakes::SearchWorkerRerankResponse rerank_resp;
-  status = hakes::decode_search_worker_rerank_response(resp_rerank.get(), &rerank_resp);
+  status = hakes::decode_search_worker_rerank_response(resp_rerank.get(),
+                                                       &rerank_resp);
 
   if (!status) {
     printf("Failed to decode rerank result\n");

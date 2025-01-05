@@ -20,33 +20,35 @@
 #include "search-worker/index/utils/distances.h"
 #include "search-worker/index/utils/random.h"
 #include "search-worker/index/utils/utils.h"
-#include "search-worker/index/blas/sgemm.h"
 
 using namespace faiss;
 
-// extern "C" {
+#ifdef USE_SGX
+#include "search-worker/index/blas/sgemm.h"
+#else // USE_SGX
+extern "C" {
 
-// // this is to keep the clang syntax checker happy
-// #ifndef FINTEGER
-// #define FINTEGER int
-// #endif
+// this is to keep the clang syntax checker happy
+#ifndef FINTEGER
+#define FINTEGER long
+#endif
 
 // /* declare BLAS functions, see http://www.netlib.org/clapack/cblas/ */
 
-// int sgemm_(
-//         const char* transa,
-//         const char* transb,
-//         FINTEGER* m,
-//         FINTEGER* n,
-//         FINTEGER* k,
-//         const float* alpha,
-//         const float* a,
-//         FINTEGER* lda,
-//         const float* b,
-//         FINTEGER* ldb,
-//         float* beta,
-//         float* c,
-//         FINTEGER* ldc);
+int sgemm_(
+        const char* transa,
+        const char* transb,
+        FINTEGER* m,
+        FINTEGER* n,
+        FINTEGER* k,
+        const float* alpha,
+        const float* a,
+        FINTEGER* lda,
+        const float* b,
+        FINTEGER* ldb,
+        float* beta,
+        float* c,
+        FINTEGER* ldc);
 
 // int dgemm_(
 //         const char* transa,
@@ -130,7 +132,8 @@ using namespace faiss;
 //         double* work,
 //         FINTEGER* lwork,
 //         FINTEGER* info);
-// }
+}
+#endif // USE_SGX
 
 /*********************************************
  * VectorTransform

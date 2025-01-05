@@ -36,6 +36,28 @@ namespace faiss {
 struct NormTableScaler;
 struct SIMDResultHandlerToFloat;
 
+struct EarlyTerminationParams {
+  int beta =
+      INT_MAX;       // ratio over the k to define candidate addition threshold
+  int ce = INT_MAX;  // consistent epoch of falling below the candidate addition
+};
+
+struct EarlyTerminationChecker {
+  idx_t k;
+  EarlyTerminationParams et_params;
+  int below_threshold_count = 0;
+
+  inline void add_stats(int new_cands) {
+    if (new_cands < k / et_params.beta) {
+      below_threshold_count++;
+    } else {
+      below_threshold_count = 0;
+    }
+  }
+
+  inline bool check() const { return below_threshold_count >= et_params.ce; }
+};
+
 /** Fast scan version of IVFPQ and IVFAQ. Works for 4-bit PQ/AQ for now.
  *
  * The codes in the inverted lists are not stored sequentially but
@@ -80,6 +102,11 @@ struct IndexIVFFastScanL : IndexIVFL {
 
   bool use_balanced_assign_ = false;
   int balance_k_ = 1;
+
+  bool use_early_termination_ = false;
+  // early termination search parameters
+  EarlyTerminationParams et_params;
+
 
   IndexIVFFastScanL(Index* quantizer, size_t d, size_t nlist, size_t code_size,
                     MetricType metric = METRIC_L2);
@@ -146,6 +173,12 @@ struct IndexIVFFastScanL : IndexIVFL {
                           const IVFSearchParameters* params = nullptr,
                           IndexIVFStats* stats = nullptr) const override;
 
+  void search_preassigned_new(idx_t n, const float* x, idx_t k,
+                              const idx_t* assign, const float* centroid_dis,
+                              float* distances, idx_t* labels, bool store_pairs,
+                              const IVFSearchParameters* params = nullptr,
+                              IndexIVFStats* stats = nullptr) const;
+
   void range_search(idx_t n, const float* x, float radius,
                     RangeSearchResult* result,
                     const SearchParameters* params = nullptr) const override;
@@ -157,6 +190,11 @@ struct IndexIVFFastScanL : IndexIVFL {
                               float* distances, idx_t* labels,
                               const CoarseQuantized& cq,
                               const NormTableScaler* scaler) const;
+
+  void search_dispatch_implem_new(idx_t n, const float* x, idx_t k,
+                                  float* distances, idx_t* labels,
+                                  const CoarseQuantized& cq,
+                                  const NormTableScaler* scaler) const;
 
   void range_search_dispatch_implem(idx_t n, const float* x, float radius,
                                     RangeSearchResult& rres,
@@ -185,6 +223,12 @@ struct IndexIVFFastScanL : IndexIVFL {
                         SIMDResultHandlerToFloat& handler,
                         const CoarseQuantized& cq, size_t* ndis_out,
                         size_t* nlist_out, const NormTableScaler* scaler) const;
+
+  void search_implem_12_new(idx_t n, const float* x, idx_t k,
+                            SIMDResultHandlerToFloat& handler,
+                            const CoarseQuantized& cq, size_t* ndis_out,
+                            size_t* nlist_out,
+                            const NormTableScaler* scaler) const;
 
   // implem 14 is multithreaded internally across nprobes and queries
   void search_implem_14(idx_t n, const float* x, idx_t k, float* distances,

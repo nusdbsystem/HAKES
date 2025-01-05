@@ -33,14 +33,25 @@ struct HakesSearchParams {
 
 class HakesIndex {
  public:
-  HakesIndex() = default;
+  HakesIndex() { pthread_rwlock_init(&mapping_mu_, nullptr); }
   ~HakesIndex() {
     for (auto vt : vts_) {
       delete vt;
+      vt = nullptr;
     }
-    for (auto vt : ivf_vts_) {
+    for (auto vt : q_vts_) {
       delete vt;
+      vt = nullptr;
     }
+    if (use_ivf_sq_) {
+      delete cq_;
+      cq_ = nullptr;
+    }
+    if (q_cq_) {
+      delete q_cq_;
+      q_cq_ = nullptr;
+    }
+    pthread_rwlock_destroy(&mapping_mu_);
   }
 
   // delete copy constructors and assignment operators
@@ -51,16 +62,10 @@ class HakesIndex {
   HakesIndex& operator=(HakesIndex&&) = delete;
 
   // bool Initialize(const std::string& path);
-  bool Initialize(IOReader* f, bool params_only = true);
+  bool Initialize(hakes::IOReader* ff, hakes::IOReader* rf, hakes::IOReader* uf,
+                  bool keep_pa = false);
 
   void UpdateIndex(const HakesIndex& other);
-
-  bool AddWithIds(int n, int d, const float* vecs, const faiss::idx_t* ids) {
-    // printf(
-    //     "EngineV3::AddWithIds need to return results of base index "
-    //     "assignment\n");
-    return false;
-  }
 
   // it is assumed that receiving engine shall store the full vecs of all
   // inputs.
@@ -69,9 +74,6 @@ class HakesIndex {
                   std::unique_ptr<float[]>* vecs_t);
 
   bool AddBase(int n, int d, const float* vecs, const faiss::idx_t* ids);
-
-  bool AddBasePreassigned(int n, int d, const float* vecs,
-                          const faiss::idx_t* ids, const faiss::idx_t* assign);
 
   bool Search(int n, int d, const float* query, const HakesSearchParams& params,
               std::unique_ptr<float[]>* distances,
@@ -82,23 +84,31 @@ class HakesIndex {
               float* base_distances, std::unique_ptr<float[]>* distances,
               std::unique_ptr<faiss::idx_t[]>* labels);
 
-  inline bool has_ivf_vts() const { return ivf_vts_.size() > 0; }
+  bool Checkpoint(hakes::IOWriter* ff, hakes::IOWriter* rf) const;
 
-  bool Checkpoint(IOWriter* f);
+  bool GetParams(hakes::IOWriter* pf) const;
+
+  bool UpdateParams(hakes::IOReader* pf);
 
   std::string to_string() const;
 
   //  private:
  public:
   std::string index_path_;
-  bool share_vt_;
+  bool use_ivf_sq_ = false;
+  bool use_refine_sq_ = false;
   std::vector<faiss::VectorTransform*> vts_;
-  std::vector<faiss::VectorTransform*> ivf_vts_;
-  faiss::Index* cq_;
+  bool has_q_index_ = false;
+  std::vector<faiss::VectorTransform*> q_vts_;
+  faiss::Index* cq_ = nullptr;
+  faiss::Index* q_cq_ = nullptr;
   std::unique_ptr<faiss::IndexIVFPQFastScanL> base_index_;
   mutable pthread_rwlock_t mapping_mu_;
   std::unique_ptr<faiss::IDMap> mapping_;
   std::unique_ptr<faiss::IndexFlatL> refine_index_;
+
+  bool keep_pa_ = false;
+  std::unordered_map<faiss::idx_t, faiss::idx_t> pa_mapping_;
 };
 
 }  // namespace faiss

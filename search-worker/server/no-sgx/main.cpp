@@ -18,17 +18,22 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
 #include <string>
 #include <thread>
 
+#include "llhttp.h"
 #include "search-worker/common/worker.h"
 #include "search-worker/common/workerImpl.h"
 #include "search_worker.h"
-#include "llhttp.h"
 #include "server/server.h"
 #include "server/service.h"
 #include "utils/fileutil.h"
 #include "uv.h"
+
+#define FINDEX_NAME "findex.bin"
+#define RINDEX_NAME "rindex.bin"
+#define UINDEX_NAME "uindex.bin"
 
 int main(int argc, char* argv[]) {
   // pick service selection
@@ -47,19 +52,34 @@ int main(int argc, char* argv[]) {
   int cluster_size = std::stoi(argv[3]);
   int server_id = std::stoi(argv[4]);
 
-  // load the data
-  size_t content_len = 0;
-  auto content = hakes::ReadFileToCharArray(path.c_str(), &content_len);
-  if (content == nullptr) {
-    fprintf(stderr, "Failed to load the data\n");
+  // check directory exists
+  if (!std::filesystem::exists(path)) {
+    fprintf(stderr, "Data path does not exist\n");
     exit(1);
   }
+  std::string findex_path = path + "/" + FINDEX_NAME;
+  std::string rindex_path = path + "/" + RINDEX_NAME;
+  std::string uindex_path = path + "/" + UINDEX_NAME;
+  // check the existence of the findex
+  if (!hakes::IsFileExist(findex_path)) {
+    fprintf(stderr, "Findex does not exist\n");
+    exit(1);
+  }
+  hakes::FileIOReader ff = hakes::FileIOReader(findex_path.c_str());
+
+  hakes::FileIOReader* rf = (hakes::IsFileExist(rindex_path))
+                                ? new hakes::FileIOReader(rindex_path.c_str())
+                                : nullptr;
+  hakes::FileIOReader* uf = (hakes::IsFileExist(uindex_path))
+                                ? new hakes::FileIOReader(uindex_path.c_str())
+                                : nullptr;
 
   search_worker::WorkerImpl* worker = new search_worker::WorkerImpl();
-  worker->Initialize(content.get(), content_len, cluster_size, server_id);
+  worker->Initialize(&ff, rf, uf, false, cluster_size, server_id);
 
-  hakes::Service s{std::unique_ptr<hakes::ServiceWorker>(
-      new search_worker::SearchWorker(std::unique_ptr<search_worker::Worker>(worker)))};
+  hakes::Service s{
+      std::unique_ptr<hakes::ServiceWorker>(new search_worker::SearchWorker(
+          std::unique_ptr<search_worker::Worker>(worker)))};
   hakes::Server server(port, &s);
   if (!server.Init()) {
     fprintf(stderr, "Failed to initialize the server\n");

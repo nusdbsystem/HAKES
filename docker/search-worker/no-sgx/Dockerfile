@@ -1,4 +1,4 @@
-FROM hakes_es_base_nosgx:v1 as search_worker_builder
+FROM intel/oneapi:2025.0.0-0-devel-ubuntu24.04 as search_worker_builder
 
 USER root
 
@@ -8,17 +8,14 @@ RUN apt-get update && apt-get install -y libssl-dev
 COPY --from=hakes_es_base_nosgx:v1 /hakes-es/deps /hakes-es/deps
 COPY ./search-worker/ /hakes-es/search-worker
 COPY ./message/ /hakes-es/message
-COPY ./ratls-channel/ /hakes-es/ratls-channel
-COPY ./secret/ /hakes-es/secret
 COPY ./server/ /hakes-es/server
-COPY ./store-client/ /hakes-es/store-client
 COPY ./utils/ /hakes-es/utils
 
 RUN cd /hakes-es/search-worker \
   && make mrproper && make no_sgx && make install && cd ..
 
 # image
-FROM ubuntu:20.04
+FROM intel/oneapi:2025.0.0-0-devel-ubuntu24.04
 
 USER root
 
