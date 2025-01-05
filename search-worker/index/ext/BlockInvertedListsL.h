@@ -21,9 +21,9 @@
 
 #include <atomic>
 
-#include "utils/io.h"
 #include "search-worker/index/invlists/InvertedLists.h"
 #include "search-worker/index/utils/AlignedTable.h"
+#include "utils/io.h"
 
 namespace faiss {
 
@@ -38,7 +38,7 @@ struct InvListUnit {
   AlignedTable<uint8_t> codes_;
   std::vector<idx_t> ids_;
   mutable pthread_rwlock_t mu_;
-  InvListUnit() = default;
+  InvListUnit() { pthread_rwlock_init(&mu_, nullptr); }
 
   // move constructor
   InvListUnit(InvListUnit&& other) noexcept {
@@ -51,27 +51,13 @@ struct InvListUnit {
                  std::memory_order_relaxed);
     codes_ = std::move(other.codes_);
     ids_ = std::move(other.ids_);
+    pthread_rwlock_init(&mu_, nullptr);
     pthread_rwlock_unlock(&other.mu_);
   }
-
-  InvListUnit& operator=(InvListUnit&& other) noexcept {
-    if (this == &other) {
-      return *this;
-    }
-
-    // lock the other
-    pthread_rwlock_wrlock(&other.mu_);
-
-    n_per_block = other.n_per_block;
-    block_size = other.block_size;
-    active = other.active;
-    count_.store(other.count_.load(std::memory_order_relaxed),
-                 std::memory_order_relaxed);
-    codes_ = std::move(other.codes_);
-    ids_ = std::move(other.ids_);
-    pthread_rwlock_unlock(&other.mu_);
-    return *this;
-  }
+  // delete copy and move constructors and assignment operators
+  InvListUnit(const InvListUnit&) = delete;
+  InvListUnit& operator=(const InvListUnit&) = delete;
+  InvListUnit& operator=(InvListUnit&&) = delete;
 
   size_t get_size() const { return count_.load(std::memory_order_relaxed); }
   size_t resize(size_t new_size);

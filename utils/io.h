@@ -39,6 +39,24 @@ struct StringIOWriter : IOWriter {
   size_t operator()(const void* ptr, size_t size, size_t nitems) override;
 };
 
+struct FileIOReader : IOReader {
+  FILE* f;
+  bool need_close;
+  FileIOReader(FILE* f) : f(f), need_close(false) {}
+  FileIOReader(const char* fname);
+  ~FileIOReader() override;
+  size_t operator()(void* ptr, size_t size, size_t nitems) override;
+};
+
+struct FileIOWriter : IOWriter {
+  FILE* f;
+  bool need_close;
+  FileIOWriter(FILE* f) : f(f), need_close(false) {}
+  FileIOWriter(const char* fname);
+  ~FileIOWriter() override;
+  size_t operator()(const void* ptr, size_t size, size_t nitems) override;
+};
+
 }  // namespace hakes
 
 #endif  // HAKES_UTILS_IO_H_

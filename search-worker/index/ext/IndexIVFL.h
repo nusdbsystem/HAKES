@@ -92,12 +92,20 @@ struct IndexIVFL : Index, IndexIVFInterface {
   // mutable std::shared_mutex mu_;
   mutable pthread_rwlock_t mu_;
 
+  IndexIVFL() { pthread_rwlock_init(&mu_, nullptr); }
+
   /** The Inverted file takes a quantizer (an Index) on input,
    * which implements the function mapping a vector to a list
    * identifier.
    */
   IndexIVFL(Index* quantizer, size_t d, size_t nlist, size_t code_size,
             MetricType metric = METRIC_L2);
+
+  // delete copy and move constructor and assign operators
+  IndexIVFL(const IndexIVFL&) = delete;
+  IndexIVFL& operator=(const IndexIVFL&) = delete;
+  IndexIVFL(IndexIVFL&&) = delete;
+  IndexIVFL& operator=(IndexIVFL&&) = delete;
 
   idx_t get_nTotal() const {
     // std::shared_lock lock(mu_);
@@ -296,8 +304,6 @@ struct IndexIVFL : Index, IndexIVFInterface {
   /* The standalone codec interface (except sa_decode that is specific) */
   size_t sa_code_size() const override;
   void sa_encode(idx_t n, const float* x, uint8_t* bytes) const override;
-
-  IndexIVFL() = default;
 };
 
 struct IndexIVFStatsL {
@@ -311,7 +317,19 @@ struct IndexIVFStatsL {
   // std::shared_mutex mu_;
   mutable pthread_rwlock_t mu_;
 
-  IndexIVFStatsL() { reset(); }
+  IndexIVFStatsL() {
+    pthread_rwlock_init(&mu_, nullptr);
+    reset();
+  }
+
+  ~IndexIVFStatsL() { pthread_rwlock_destroy(&mu_); }
+
+  // delete copy and move constructor and assign operators
+  IndexIVFStatsL(const IndexIVFStatsL&) = delete;
+  IndexIVFStatsL& operator=(const IndexIVFStatsL&) = delete;
+  IndexIVFStatsL(IndexIVFStatsL&&) = delete;
+  IndexIVFStatsL& operator=(IndexIVFStatsL&&) = delete;
+
   void reset();
   // void add(const IndexIVFStats& other);
 };

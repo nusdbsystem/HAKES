@@ -33,7 +33,7 @@ struct HakesSearchParams {
 
 class HakesIndex {
  public:
-  HakesIndex() = default;
+  HakesIndex() { pthread_rwlock_init(&mapping_mu_, nullptr); }
   ~HakesIndex() {
     for (auto vt : vts_) {
       delete vt;
@@ -51,6 +51,7 @@ class HakesIndex {
       delete q_cq_;
       q_cq_ = nullptr;
     }
+    pthread_rwlock_destroy(&mapping_mu_);
   }
 
   // delete copy constructors and assignment operators
@@ -61,7 +62,8 @@ class HakesIndex {
   HakesIndex& operator=(HakesIndex&&) = delete;
 
   // bool Initialize(const std::string& path);
-  bool Initialize(hakes::IOReader* ff, hakes::IOReader* rf, hakes::IOReader* uf, bool keep_pa = false);
+  bool Initialize(hakes::IOReader* ff, hakes::IOReader* rf, hakes::IOReader* uf,
+                  bool keep_pa = false);
 
   void UpdateIndex(const HakesIndex& other);
 
@@ -82,11 +84,11 @@ class HakesIndex {
               float* base_distances, std::unique_ptr<float[]>* distances,
               std::unique_ptr<faiss::idx_t[]>* labels);
 
-  bool Checkpoint(hakes::IOWriter* f);
+  bool Checkpoint(hakes::IOWriter* ff, hakes::IOWriter* rf) const;
 
-  std::string GetParams() const;
+  bool GetParams(hakes::IOWriter* pf) const;
 
-  bool UpdateParams(const std::string& params);
+  bool UpdateParams(hakes::IOReader* pf);
 
   std::string to_string() const;
 

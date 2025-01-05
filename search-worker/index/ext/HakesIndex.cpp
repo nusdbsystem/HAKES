@@ -22,27 +22,28 @@
 #include "search-worker/index/ext/IndexScalarQuantizerL.h"
 #include "search-worker/index/ext/index_io_ext.h"
 #include "search-worker/index/ext/utils.h"
+#include "utils/io.h"
 
 namespace faiss {
 
-bool HakesIndex::Initialize(hakes::IOReader* ff, hakes::IOReader* rf, hakes::IOReader* uf, bool keep_pa) {
-  bool success = load_hakes_index_new(ff, rf, this, keep_pa);
+bool HakesIndex::Initialize(hakes::IOReader* ff, hakes::IOReader* rf,
+                            hakes::IOReader* uf, bool keep_pa) {
+  bool success = load_hakes_index(ff, rf, this, keep_pa);
   if (uf != nullptr) {
     // load query index
     faiss::HakesIndex update_index;
-    success = load_hakes_index_new(uf, nullptr, &update_index, keep_pa);
+    success = load_hakes_index(uf, nullptr, &update_index, keep_pa);
     this->UpdateIndex(update_index);
   } else if (use_ivf_sq_) {
     // no query index provided, apply sq to the ivf centroids
     auto tmp = new IndexScalarQuantizerL(
-        base_index_->d,
-        ScalarQuantizer::QuantizerType::QT_8bit_direct,
+        base_index_->d, ScalarQuantizer::QuantizerType::QT_8bit_direct,
         faiss::MetricType::METRIC_L2);
     int nlist = base_index_->quantizer->get_ntotal();
     auto scaled_codes = std::vector<float>(nlist * base_index_->d);
-    const float* to_scale = (const float*)static_cast<IndexFlatL*>(
-                                base_index_->quantizer)
-                                ->codes.data();
+    const float* to_scale =
+        (const float*)static_cast<IndexFlatL*>(base_index_->quantizer)
+            ->codes.data();
     for (int i = 0; i < nlist * base_index_->d; i++) {
       scaled_codes[i] = to_scale[i] * 127 + 128;
     }
@@ -56,6 +57,7 @@ bool HakesIndex::Initialize(hakes::IOReader* ff, hakes::IOReader* rf, hakes::IOR
 }
 
 void HakesIndex::UpdateIndex(const HakesIndex& update_index) {
+  assert(update_index.base_index_);
   assert(update_index.base_index_->metric_type == base_index_->metric_type);
   assert(update_index.cq_->ntotal == update_index.cq_->ntotal);
   assert(update_index.vts_.back()->d_out == base_index_->d);
@@ -125,10 +127,12 @@ void HakesIndex::UpdateIndex(const HakesIndex& update_index) {
   } else {
     // new quantizer
     IndexFlatL* new_quantizer =
-        new IndexFlatL(update_index.cq_->d, update_index.cq_->metric_type);
-    new_quantizer->ntotal = update_index.cq_->ntotal;
-    new_quantizer->is_trained = update_index.cq_->is_trained;
-    new_quantizer->codes = dynamic_cast<IndexFlatL*>(update_index.cq_)->codes;
+        new IndexFlatL(update_index.base_index_->quantizer->d,
+                       update_index.base_index_->quantizer->metric_type);
+    new_quantizer->ntotal = update_index.base_index_->quantizer->ntotal;
+    new_quantizer->is_trained = update_index.base_index_->quantizer->is_trained;
+    new_quantizer->codes =
+        dynamic_cast<IndexFlatL*>(update_index.base_index_->quantizer)->codes;
     if (has_q_index_) {
       delete q_cq_;
       q_cq_ = new_quantizer;
@@ -208,11 +212,13 @@ bool HakesIndex::AddWithIds(int n, int d, const float* vecs,
 
   auto base_add_end = std::chrono::high_resolution_clock::now();
 
-  printf("refine add time: %f, vt add time: %f, cq assign time: %f, base add time: %f\n",
-         std::chrono::duration<double>(refine_add_end - start).count(),
-         std::chrono::duration<double>(vt_add_end - refine_add_end).count(),
-         std::chrono::duration<double>(cq_assign_end - vt_add_end).count(),
-         std::chrono::duration<double>(base_add_end - cq_assign_end).count());
+  printf(
+      "refine add time: %f, vt add time: %f, cq assign time: %f, base add "
+      "time: %f\n",
+      std::chrono::duration<double>(refine_add_end - start).count(),
+      std::chrono::duration<double>(vt_add_end - refine_add_end).count(),
+      std::chrono::duration<double>(cq_assign_end - vt_add_end).count(),
+      std::chrono::duration<double>(base_add_end - cq_assign_end).count());
   return true;
 }
 
@@ -415,20 +421,19 @@ bool HakesIndex::Rerank(int n, int d, const float* query, int k,
 }
 
 // same as EngineV2
-bool HakesIndex::Checkpoint(hakes::IOWriter* f) {
-  return write_hakes_index_single_file(f, this);
+bool HakesIndex::Checkpoint(hakes::IOWriter* ff, hakes::IOWriter* rf) const {
+  save_hakes_index(ff, rf, this);
+  return true;
 }
 
-std::string HakesIndex::GetParams() const {
-  hakes::StringIOWriter w;
-  bool success = write_hakes_index_single_file(&w, this);
-  return success ? w.data : "";
+bool HakesIndex::GetParams(hakes::IOWriter* pf) const {
+  save_hakes_params(pf, this);
+  return true;
 }
 
-bool HakesIndex::UpdateParams(const std::string& params) {
-  hakes::StringIOReader r(params.data(), params.size());
+bool HakesIndex::UpdateParams(hakes::IOReader* pf) {
   HakesIndex loaded;
-  bool success = load_hakes_index_single_file(&r, &loaded);
+  bool success = load_hakes_params(pf, &loaded);
   if (!success) {
     return false;
   }

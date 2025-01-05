@@ -179,6 +179,7 @@ IndexIVFL::IndexIVFL(Index* quantizer, size_t d, size_t nlist, size_t code_size,
   if (metric_type == METRIC_INNER_PRODUCT) {
     cp.spherical = true;
   }
+  pthread_rwlock_init(&mu_, nullptr);
 }
 
 // IndexIVFL::IndexIVFL() = default;
@@ -1194,6 +1195,7 @@ IndexIVFL::~IndexIVFL() {
   if (own_invlists) {
     delete invlists;
   }
+  pthread_rwlock_destroy(&this->mu_);
 }
 
 /*************************************************************************

@@ -50,6 +50,7 @@ IndexRefineL::IndexRefineL(Index* base_index, Index* refine_index)
     assert(base_index->get_ntotal() == refine_index->get_ntotal());
   }  // other case is useful only to construct an IndexRefineFlatL
   ntotal = base_index->get_ntotal();
+  pthread_rwlock_init(&mu, nullptr);
 }
 
 void IndexRefineL::train(idx_t n, const float* x) {
@@ -241,6 +242,7 @@ void IndexRefineL::sa_decode(idx_t n, const uint8_t* bytes, float* x) const {
 IndexRefineL::~IndexRefineL() {
   if (own_fields) delete base_index;
   if (own_refine_index) delete refine_index;
+  pthread_rwlock_destroy(&mu);
 }
 
 /***************************************************

@@ -86,48 +86,15 @@ struct IndexRefineL : Index {
       : base_index(nullptr),
         refine_index(nullptr),
         own_fields(false),
-        own_refine_index(false) {}
+        own_refine_index(false) {
+    pthread_rwlock_init(&mu, nullptr);
+  }
 
-  // copy constructors
-  IndexRefineL(const IndexRefineL& other) : Index() {
-    // index fields
-    d = other.d;
-    ntotal = other.ntotal;
-    verbose = other.verbose;
-    is_trained = other.is_trained;
-    metric_type = other.metric_type;
-    metric_arg = other.metric_arg;
-    // IndexRefineL fields
-    base_index = other.base_index;
-    refine_index = other.refine_index;
-    own_fields = other.own_fields;
-    own_refine_index = other.own_refine_index;
-    k_factor = other.k_factor;
-    idx_to_off = other.idx_to_off;
-    off_to_idx = other.off_to_idx;
-  };
-  // copy assignment operator
-  IndexRefineL& operator=(const IndexRefineL& other) {
-    if (this == &other) {
-      return *this;
-    }
-    // index fields
-    d = other.d;
-    ntotal = other.ntotal;
-    verbose = other.verbose;
-    is_trained = other.is_trained;
-    metric_type = other.metric_type;
-    metric_arg = other.metric_arg;
-    // IndexRefineL fields
-    base_index = other.base_index;
-    refine_index = other.refine_index;
-    own_fields = other.own_fields;
-    own_refine_index = other.own_refine_index;
-    k_factor = other.k_factor;
-    idx_to_off = other.idx_to_off;
-    off_to_idx = other.off_to_idx;
-    return *this;
-  };
+  // delete copy and move constructor and assign operators
+  IndexRefineL(const IndexRefineL&) = delete;
+  IndexRefineL& operator=(const IndexRefineL&) = delete;
+  IndexRefineL(IndexRefineL&&) = delete;
+  IndexRefineL& operator=(IndexRefineL&&) = delete;
 
   void train(idx_t n, const float* x) override;
 

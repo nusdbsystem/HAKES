@@ -42,6 +42,7 @@ struct Config {
   int k_factor = 50;
   std::string index_path;
   std::string update_path = "";
+  std::string save_path = ".";
 };
 
 Config parse_config(int argc, char** argv) {
@@ -51,7 +52,7 @@ Config parse_config(int argc, char** argv) {
         << "Usage: " << argv[0]
         << " DATA_N DATA_NUM_QUERY DATA_DIM SEARCH_K DATA_GROUNDTRUTH_LEN "
            "DATA_TRAIN_PATH DATA_QUERY_PATH DATA_GROUNDTRUTH_PATH NPROBE "
-           "K_FACTOR INDEX_PATH UPDATE_PATH"
+           "K_FACTOR INDEX_PATH UPDATE_PATH SAVE_PATH"
         << std::endl;
     exit(1);
   }
@@ -69,6 +70,9 @@ Config parse_config(int argc, char** argv) {
   cfg.index_path = argv[11];
   if (argc > 12) {
     cfg.update_path = argv[12];
+  }
+  if (argc > 13) {
+    cfg.save_path = argv[13];
   }
 
   std::cout << "DATA_N: " << cfg.data_n << std::endl;
@@ -97,6 +101,9 @@ int main(int argc, char* argv[]) {
   int gt_len = cfg.data_groundtruth_len;
   int k = cfg.search_k;
 
+  auto save_findex_path = cfg.save_path + "/findex.bin";
+  auto save_rindex_path = cfg.save_path + "/rindex.bin";
+
   // search_worker::WorkerImpl worker{};
   std::unique_ptr<faiss::HakesIndex> index(new faiss::HakesIndex());
   index->use_ivf_sq_ = true;
@@ -112,10 +119,24 @@ int main(int argc, char* argv[]) {
   if (cfg.update_path.empty()) {
     index->Initialize(&reader, nullptr, nullptr, false);
   } else {
-    auto update_content =
-        hakes::ReadFileToCharArray(cfg.update_path.c_str(), &content_len);
-    hakes::StringIOReader update_reader(update_content.get(), content_len);
+    hakes::FileIOReader update_reader(cfg.update_path.c_str());
+    // a. directly update query index
     index->Initialize(&reader, nullptr, &update_reader, false);
+    // // b. save query params and perform a query index update
+    // index->Initialize(&reader, nullptr, nullptr, false);
+    // faiss::HakesIndex update_index;
+    // update_index.Initialize(&update_reader, nullptr, nullptr, false);
+    // printf("update_index loaded\n");
+    // {
+    //   auto upw = hakes::FileIOWriter("./update_params.bin");
+    //   update_index.GetParams(&upw);
+    //   printf("update_index params saved\n");
+    // }
+    // {
+    //   auto upr = hakes::FileIOReader("./update_params.bin");
+    //   index->UpdateParams(&upr);
+    //   printf("update_index params loaded\n");
+    // }
   }
 
   std::cout << "Index loaded" << std::endl;
@@ -256,6 +277,7 @@ int main(int argc, char* argv[]) {
   std::unique_ptr<float[]> vecs_t;
 
   auto batch_size = 100000;
+  // auto batch_size = 100;
   for (int i = 0; i < n; i += batch_size) {
     index->AddWithIds(std::min(batch_size, n - i), d, data + i * d,
                       xids.get() + i, assign.get() + i, &vecs_t_d, &vecs_t);
@@ -264,6 +286,13 @@ int main(int argc, char* argv[]) {
   }
 
   std::cout << "Index: " << index->to_string() << std::endl;
+
+  // save index
+  {
+    auto ff = hakes::FileIOWriter(save_findex_path.c_str());
+    auto rf = hakes::FileIOWriter(save_rindex_path.c_str());
+    index->Checkpoint(&ff, &rf);
+  }
 
   {
     index->base_index_->use_early_termination_ = true;
@@ -292,6 +321,74 @@ int main(int argc, char* argv[]) {
             std::make_unique<faiss::idx_t[]>(1);
         k_base_count[0] = k_base;
         index->Rerank(1, d, query + i * d, k, k_base_count.get(),
+                      candidates.get(), distances.get(), &distances,
+                      &candidates);
+        std::memcpy(result.get() + i * k, candidates.get(),
+                    k * sizeof(faiss::idx_t));
+      }
+      auto end = std::chrono::high_resolution_clock::now();
+      std::chrono::duration<double> diff = end - start;
+
+      int correct = 0;
+      for (int i = 0; i < nq; i++) {
+        std::unordered_set<int> gts(k);
+        for (int j = 0; j < k; j++) {
+          gts.insert(groundtruth[i * gt_len + j]);
+        }
+
+        for (int j = 0; j < k; j++) {
+          if (gts.find(result[i * k + j]) != gts.end()) {
+            correct++;
+          }
+        }
+      }
+
+      std::cout << "nprobe: " << nprobe << " k_factor: " << k_factor
+                << " search time (s): " << diff.count()
+                << " recall: " << correct / (float)(nq * k) << std::endl;
+    }
+  }
+
+  // test reload
+  faiss::HakesIndex index2;
+  {
+    auto ff = hakes::FileIOReader(save_findex_path.c_str());
+    auto rf = hakes::FileIOReader(save_rindex_path.c_str());
+    auto uf = hakes::FileIOReader(cfg.update_path.c_str());
+    index2.use_ivf_sq_ = true;
+    index2.use_refine_sq_ = false;
+    index2.Initialize(&ff, &rf, &uf, false);
+    std::cout << "Index2 loaded" << std::endl;
+    std::cout << index2.to_string() << std::endl;
+  }
+
+  {
+    index2.base_index_->use_early_termination_ = true;
+    index2.base_index_->et_params.beta = 200;
+    index2.base_index_->et_params.ce = 30;
+  }
+
+  auto nprobe_list2 = std::vector<int>{1, 5, 10, 50, 100, 200, 300};
+  auto k_factor_list2 = std::vector<int>{1, 10, 20, 50, 100, 200, 300};
+
+  for (auto nprobe : nprobe_list2) {
+    for (auto k_factor : k_factor_list2) {
+      auto k_base = k * k_factor;
+      faiss::HakesSearchParams params{nprobe, k, k_factor,
+                                      faiss::METRIC_INNER_PRODUCT};
+
+      auto result = std::make_unique<faiss::idx_t[]>(k * nq);
+      auto start = std::chrono::high_resolution_clock::now();
+
+      for (int i = 0; i < nq; ++i) {
+        // printf("\nquery %d: ", i);
+        std::unique_ptr<faiss::idx_t[]> candidates;
+        std::unique_ptr<float[]> distances;
+        index2.Search(1, d, query + i * d, params, &distances, &candidates);
+        std::unique_ptr<faiss::idx_t[]> k_base_count =
+            std::make_unique<faiss::idx_t[]>(1);
+        k_base_count[0] = k_base;
+        index2.Rerank(1, d, query + i * d, k, k_base_count.get(),
                       candidates.get(), distances.get(), &distances,
                       &candidates);
         std::memcpy(result.get() + i * k, candidates.get(),
