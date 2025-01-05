@@ -26,6 +26,7 @@
 #include <cassert>
 #include <chrono>
 #include <cstring>
+#include <typeinfo>
 
 #include "search-worker/index/impl/CodePacker.h"
 

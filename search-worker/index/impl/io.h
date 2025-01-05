@@ -17,6 +17,7 @@
 #ifndef HAKES_SEARCHWORKER_INDEX_IMPL_IO_H_
 #define HAKES_SEARCHWORKER_INDEX_IMPL_IO_H_
 
+#include <cstdint>
 #include <cstdio>
 #include <string>
 #include <vector>

@@ -16,6 +16,7 @@
 
 #include "search-worker/index/ext/HakesIndex.h"
 
+#include <stdexcept>
 #include <vector>
 
 #include "search-worker/index/ext/IndexIVFFastScanL.h"
