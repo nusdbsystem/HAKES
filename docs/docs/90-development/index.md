@@ -11,7 +11,7 @@ To set up dependencies (e.g., cURL, Intel MKL) without root permission, you may 
 ```bash
 conda create -n hakes-dev
 conda activate hakes-dev
-conda install libcurl-static mkl
+conda install 'libcurl-static=7.87' mkl
 ```
 
 Then, add the path to the installed C libraries to the compiler library search path.
