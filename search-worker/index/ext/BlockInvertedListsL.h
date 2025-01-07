@@ -101,13 +101,11 @@ struct BlockInvertedListsL : InvertedLists {
   const CodePacker* packer_ = nullptr;
 
   std::vector<InvListUnit> lists_;
-  std::vector<int> load_list_;
 
   explicit BlockInvertedListsL(size_t nlist, size_t vec_per_block,
                                size_t block_size);
 
-  void init(const CodePacker* packer, const std::vector<int>& load_list,
-            size_t init_list_cap = 0);
+  void init(const CodePacker* packer, size_t init_list_cap = 0);
 
   void set_code_packer(const CodePacker* packer);
 

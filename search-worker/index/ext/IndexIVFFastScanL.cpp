@@ -85,7 +85,7 @@ void IndexIVFFastScanL::init_fastscan(size_t M, size_t nbits, size_t nlist,
   is_trained = false;
   auto packer = get_CodePacker();  // will be owned by the lists
   auto lists = new BlockInvertedListsL(nlist, packer->nvec, packer->block_size);
-  lists->init(packer, std::vector<int>());  // no specification of load list
+  lists->init(packer);  // no specification of load list
   replace_invlists(lists, true);
 }
 

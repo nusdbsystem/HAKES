@@ -116,22 +116,12 @@ BlockInvertedListsL::BlockInvertedListsL(size_t nlist, size_t vec_per_block,
   lists_.resize(nlist);
 }
 
-void BlockInvertedListsL::init(const CodePacker* packer,
-                               const std::vector<int>& load_list,
-                               size_t init_list_cap) {
+void BlockInvertedListsL::init(const CodePacker* packer, size_t init_list_cap) {
   if (this->packer_) {
     delete this->packer_;
   }
   this->packer_ = packer;
-  this->load_list_ = load_list;
-  if (this->load_list_.empty()) {
-    // load all the list
-    this->load_list_.resize(nlist);
-    for (size_t i = 0; i < nlist; i++) {
-      this->load_list_[i] = i;
-    }
-  }
-  for (auto idx : this->load_list_) {
+  for (int idx = 0; idx < nlist; idx++) {
     this->lists_[idx].set_active(n_per_block_, block_size_, init_list_cap);
   }
 }
