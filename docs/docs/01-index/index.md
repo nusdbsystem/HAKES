@@ -32,6 +32,8 @@ All components of HAKES are containerised and instructions to build the images c
 
 You may use [Anaconda](https://www.anaconda.com/download/success) to set up the building environment more easily.
 
+For more details, see [here](/development).
+
 ## Contact
 
 Feel free to send the maintainers an email for any questions:
