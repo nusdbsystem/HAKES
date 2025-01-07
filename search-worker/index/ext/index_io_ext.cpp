@@ -25,6 +25,7 @@
 #include "search-worker/index/impl/CodePacker.h"
 #include "search-worker/index/impl/io.h"
 #include "search-worker/index/impl/io_macros.h"
+#include "search-worker/index/impl/pq4_fast_scan.h"
 
 namespace faiss {
 
@@ -88,13 +89,14 @@ bool write_hakes_pretransform(hakes::IOWriter* f,
 }
 
 void write_hakes_ivf(hakes::IOWriter* f, const HakesIndex* idx) {
-  uint32_t d = idx->base_index_->d;
+  int32_t d = idx->base_index_->d;
   uint64_t ntotal = idx->base_index_->ntotal;
   uint8_t metric_type = (idx->base_index_->metric_type == METRIC_L2) ? 0 : 1;
+  int32_t nlist = idx->base_index_->nlist;
   WRITE1(d);
   WRITE1(ntotal);
   WRITE1(metric_type);
-  WRITE1(idx->base_index_->nlist);
+  WRITE1(nlist);
 
   size_t code_size =
       idx->base_index_->nlist * idx->base_index_->d * sizeof(float);
@@ -107,21 +109,21 @@ void write_hakes_ivf(hakes::IOWriter* f, const HakesIndex* idx) {
 }
 
 bool read_hakes_ivf(hakes::IOReader* f, HakesIndex* idx) {
-  uint32_t d;
+  int32_t d;
   uint64_t ntotal;
   uint8_t metric_type;
+  int32_t nlist;
   READ1(d);
   READ1(ntotal);
   READ1(metric_type);
+  READ1(nlist);
   idx->base_index_->d = d;
   idx->base_index_->ntotal = ntotal;
   faiss::MetricType metric =
       (metric_type == 0) ? faiss::METRIC_L2 : faiss::METRIC_INNER_PRODUCT;
   idx->base_index_->metric_type = metric;
-  size_t nlist;
-  READ1(nlist);
   idx->base_index_->nlist = nlist;
-  printf("read_hakes_ivf: d: %d, ntotal: %ld, nlist: %ld\n", d, ntotal, nlist);
+  printf("read_hakes_ivf: d: %d, ntotal: %ld, nlist: %d\n", d, ntotal, nlist);
 
   IndexFlatL* quantizer = new IndexFlatL(d, metric);
   size_t code_size = nlist * d * sizeof(float);
@@ -135,19 +137,22 @@ bool read_hakes_ivf(hakes::IOReader* f, HakesIndex* idx) {
 
 void write_hakes_pq(hakes::IOWriter* f, const HakesIndex* idx) {
   ProductQuantizer* pq = &idx->base_index_->pq;
-  WRITE1(pq->d);
-  WRITE1(pq->M);
-  WRITE1(pq->nbits);
+  int32_t d = pq->d;
+  int32_t M = pq->M;
+  int32_t nbits = pq->nbits;
+  WRITE1(d);
+  WRITE1(M);
+  WRITE1(nbits);
   size_t centroids_size = pq->M * pq->ksub * pq->dsub;
   WRITEANDCHECK(pq->centroids.data(), centroids_size);
 }
 
 bool read_hakes_pq(hakes::IOReader* f, HakesIndex* idx) {
-  size_t d, M, nbits;
+  int32_t d, M, nbits;
   READ1(d);
   READ1(M);
   READ1(nbits);
-  printf("read_hakes_pq: d: %ld, M: %ld, nbits: %ld\n", d, M, nbits);
+  printf("read_hakes_pq: d: %d, M: %d, nbits: %d\n", d, M, nbits);
   ProductQuantizer* pq = &idx->base_index_->pq;
   pq->d = d;
   pq->M = M;
@@ -162,46 +167,39 @@ bool read_hakes_pq(hakes::IOReader* f, HakesIndex* idx) {
 }
 
 void write_hakes_compressed_vecs(hakes::IOWriter* f, const HakesIndex* idx) {
+  if (idx->base_index_->ntotal == 0) {
+    return;
+  }
   // write the compressed vectors
   const BlockInvertedListsL* il =
       dynamic_cast<const BlockInvertedListsL*>(idx->base_index_->invlists);
-  WRITE1(il->nlist);
-  WRITE1(il->code_size);
-  WRITE1(il->n_per_block_);
-  WRITE1(il->block_size_);
-  WRITEVECTOR(il->load_list_);
   for (size_t i = 0; i < il->nlist; i++) {
     il->lists_[i].write(f);
   }
 }
 
 bool read_hakes_compressed_vecs(hakes::IOReader* f, HakesIndex* idx) {
-  size_t nlist, code_size, n_per_block, block_size;
-  std::vector<int> load_list;
-  READ1(nlist);
-  READ1(code_size);
-  READ1(n_per_block);
-  READ1(block_size);
-  printf(
-      "read_hakes_compressed_vecs: nlist: %ld, code_size: %ld, n_per_block: "
-      "%ld, block_size: %ld\n",
-      nlist, code_size, n_per_block, block_size);
+  int32_t nlist = idx->base_index_->nlist;
+  printf("read_hakes_compressed_vecs: nlist: %d\n", nlist);
 
-  READVECTOR(load_list);
-
+  auto packer = CodePackerPQ4(idx->base_index_->pq.M, 32);
   BlockInvertedListsL* il =
-      new BlockInvertedListsL(nlist, n_per_block, block_size);
-  for (size_t i = 0; i < nlist; i++) {
-    il->lists_[i].read(f);
+      new BlockInvertedListsL(nlist, packer.nvec, packer.block_size);
+
+  if (idx->base_index_->ntotal != 0) {
+    for (size_t i = 0; i < nlist; i++) {
+      il->lists_[i].read(f);
+    }
   }
-  il->init(nullptr, load_list);
+
+  il->init(nullptr);
   idx->base_index_->invlists = il;
   idx->base_index_->own_invlists = true;
   return true;
 }
 
 void write_hakes_full_vecs(hakes::IOWriter* f, const HakesIndex* idx) {
-  uint32_t d = idx->refine_index_->d;
+  int32_t d = idx->refine_index_->d;
   uint64_t ntotal = idx->refine_index_->ntotal;
   uint8_t metric_type = (idx->refine_index_->metric_type == METRIC_L2) ? 0 : 1;
   WRITE1(d);
@@ -211,7 +209,7 @@ void write_hakes_full_vecs(hakes::IOWriter* f, const HakesIndex* idx) {
 }
 
 bool read_hakes_full_vecs(hakes::IOReader* f, HakesIndex* idx) {
-  uint32_t d;
+  int32_t d;
   uint64_t ntotal;
   uint8_t metric_type;
   READ1(d);
@@ -349,7 +347,7 @@ bool load_hakes_params(hakes::IOReader* f, HakesIndex* idx) {
   auto code_packer = idx->base_index_->get_CodePacker();
   auto il = new BlockInvertedListsL(idx->base_index_->nlist, code_packer->nvec,
                                     code_packer->block_size);
-  il->init(nullptr, std::vector<int>());
+  il->init(nullptr);
   idx->base_index_->invlists = il;
   idx->base_index_->own_invlists = true;
   idx->base_index_->init_code_packer();
