@@ -11,7 +11,16 @@ To set up dependencies (e.g., cURL, Intel MKL) without root permission, you may 
 ```bash
 conda create -n hakes-dev
 conda activate hakes-dev
-conda install 'libcurl-static=7.87' mkl clang
+conda config --add channels conda-forge
+
+# library dependencies
+conda install 'openssl=1' 'libcurl-static=7.87' mkl
+
+# for building llhttp, if clang is not available globally
+conda install 'clang=18.1.7'
+
+# for building HAKES, if gcc is not available globally
+conda install 'gcc=9.4' 'gxx=9.4'
 ```
 
 Then, add the path to the installed C libraries to the compiler library search path.
@@ -35,3 +44,27 @@ Finally, go to the module directory (e.g., `hakes-worker/`) and build.
 cd hakes-worker
 make no_sgx -j
 ```
+
+### Enabling debug (GDB)
+
+Install packages for debugging.
+
+```bash
+# if gdb is not available globally
+conda install 'gdb=9'
+```
+
+Go to the module directory and build with debugging symbol enabled.
+
+```bash
+cd hakes-worker
+DEBUG=1 make no_sgx -j
+```
+
+Set the program to load `libasan`.
+
+```bash
+export LD_PRELOAD="$LD_LIBRARY_PATH/libasan.so" 
+```
+
+Finally, start the program.
