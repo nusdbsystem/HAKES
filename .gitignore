@@ -33,6 +33,9 @@
 # vscode
 .vscode
 
+# python
+__pycache__
+
 # build
 install
 build
