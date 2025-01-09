@@ -34,7 +34,7 @@ bool HakesIndex::Initialize(hakes::IOReader* ff, hakes::IOReader* rf,
     // load query index
     faiss::HakesIndex update_index;
     success = load_hakes_index(uf, nullptr, &update_index, keep_pa);
-    this->UpdateIndex(update_index);
+    this->UpdateIndex(&update_index);
   } else if (use_ivf_sq_) {
     // no query index provided, apply sq to the ivf centroids
     auto tmp = new IndexScalarQuantizerL(
@@ -54,28 +54,30 @@ bool HakesIndex::Initialize(hakes::IOReader* ff, hakes::IOReader* rf,
     // no query index provided, just access the ivf centroids
     cq_ = base_index_->quantizer;
   }
+  base_index_->use_balanced_assign_ = false;
   return success;
 }
 
-void HakesIndex::UpdateIndex(const HakesIndex& update_index) {
-  assert(update_index.base_index_);
-  assert(update_index.base_index_->metric_type == base_index_->metric_type);
-  assert(update_index.cq_->ntotal == update_index.cq_->ntotal);
-  assert(update_index.vts_.back()->d_out == base_index_->d);
-  assert(update_index.base_index_->by_residual == base_index_->by_residual);
-  assert(update_index.base_index_->code_size == base_index_->code_size);
-  assert(update_index.base_index_->ksub == base_index_->ksub);
-  assert(update_index.base_index_->nbits == base_index_->nbits);
-  assert(update_index.base_index_->M == base_index_->M);
-  assert(update_index.base_index_->M2 == base_index_->M2);
-  assert(update_index.base_index_->implem == base_index_->implem);
-  assert(update_index.base_index_->qbs2 == base_index_->qbs2);
-  assert(update_index.base_index_->bbs == base_index_->bbs);
+void HakesIndex::UpdateIndex(const HakesCollection* abs_index) {
+  auto update_index = dynamic_cast<const HakesIndex*>(abs_index);
+  assert(update_index->base_index_);
+  assert(update_index->base_index_->metric_type == base_index_->metric_type);
+  assert(update_index->cq_->ntotal == update_index->cq_->ntotal);
+  assert(update_index->vts_.back()->d_out == base_index_->d);
+  assert(update_index->base_index_->by_residual == base_index_->by_residual);
+  assert(update_index->base_index_->code_size == base_index_->code_size);
+  assert(update_index->base_index_->ksub == base_index_->ksub);
+  assert(update_index->base_index_->nbits == base_index_->nbits);
+  assert(update_index->base_index_->M == base_index_->M);
+  assert(update_index->base_index_->M2 == base_index_->M2);
+  assert(update_index->base_index_->implem == base_index_->implem);
+  assert(update_index->base_index_->qbs2 == base_index_->qbs2);
+  assert(update_index->base_index_->bbs == base_index_->bbs);
 
   // new vts
   std::vector<VectorTransform*> new_vts_;
-  new_vts_.reserve(update_index.vts_.size());
-  for (auto vt : update_index.vts_) {
+  new_vts_.reserve(update_index->vts_.size());
+  for (auto vt : update_index->vts_) {
     auto lt = dynamic_cast<LinearTransform*>(vt);
     LinearTransform* new_vt = new LinearTransform(vt->d_in, vt->d_out);
     new_vt->A = lt->A;
@@ -105,15 +107,16 @@ void HakesIndex::UpdateIndex(const HakesIndex& update_index) {
   if (use_ivf_sq_) {
     // apply sq to the update index ivf centroids
     auto tmp = new IndexScalarQuantizerL(
-        update_index.base_index_->d,
+        update_index->base_index_->d,
         ScalarQuantizer::QuantizerType::QT_8bit_direct,
         faiss::MetricType::METRIC_L2);
-    int nlist = update_index.base_index_->quantizer->get_ntotal();
-    auto scaled_codes = std::vector<float>(nlist * update_index.base_index_->d);
+    int nlist = update_index->base_index_->quantizer->get_ntotal();
+    auto scaled_codes =
+        std::vector<float>(nlist * update_index->base_index_->d);
     const float* to_scale = (const float*)static_cast<IndexFlatL*>(
-                                update_index.base_index_->quantizer)
+                                update_index->base_index_->quantizer)
                                 ->codes.data();
-    for (int i = 0; i < nlist * update_index.base_index_->d; i++) {
+    for (int i = 0; i < nlist * update_index->base_index_->d; i++) {
       scaled_codes[i] = to_scale[i] * 127 + 128;
     }
     tmp->add(nlist, scaled_codes.data());
@@ -128,12 +131,13 @@ void HakesIndex::UpdateIndex(const HakesIndex& update_index) {
   } else {
     // new quantizer
     IndexFlatL* new_quantizer =
-        new IndexFlatL(update_index.base_index_->quantizer->d,
-                       update_index.base_index_->quantizer->metric_type);
-    new_quantizer->ntotal = update_index.base_index_->quantizer->ntotal;
-    new_quantizer->is_trained = update_index.base_index_->quantizer->is_trained;
+        new IndexFlatL(update_index->base_index_->quantizer->d,
+                       update_index->base_index_->quantizer->metric_type);
+    new_quantizer->ntotal = update_index->base_index_->quantizer->ntotal;
+    new_quantizer->is_trained =
+        update_index->base_index_->quantizer->is_trained;
     new_quantizer->codes =
-        dynamic_cast<IndexFlatL*>(update_index.base_index_->quantizer)->codes;
+        dynamic_cast<IndexFlatL*>(update_index->base_index_->quantizer)->codes;
     if (has_q_index_) {
       delete q_cq_;
       q_cq_ = new_quantizer;
@@ -146,13 +150,13 @@ void HakesIndex::UpdateIndex(const HakesIndex& update_index) {
   }
 
   // new base index pq
-  assert(update_index.base_index_->pq.M == base_index_->pq.M);
-  assert(update_index.base_index_->pq.nbits == base_index_->pq.nbits);
+  assert(update_index->base_index_->pq.M == base_index_->pq.M);
+  assert(update_index->base_index_->pq.nbits == base_index_->pq.nbits);
   if (has_q_index_) {
     base_index_->has_q_pq = true;
-    base_index_->q_pq = update_index.base_index_->pq;
+    base_index_->q_pq = update_index->base_index_->pq;
   } else {
-    base_index_->pq.centroids = update_index.base_index_->pq.centroids;
+    base_index_->pq.centroids = update_index->base_index_->pq.centroids;
   }
 }
 
@@ -438,7 +442,7 @@ bool HakesIndex::UpdateParams(hakes::IOReader* pf) {
   if (!success) {
     return false;
   }
-  UpdateIndex(loaded);
+  UpdateIndex(&loaded);
   return true;
 }
 

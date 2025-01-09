@@ -208,8 +208,43 @@ void write_hakes_full_vecs(hakes::IOWriter* f, const HakesIndex* idx) {
   WRITEXBVECTOR(idx->refine_index_->codes);
 }
 
+void save_hakes_flatindex(hakes::IOWriter* f, const HakesFlatIndex* idx) {
+  uint32_t d = idx->refine_index_->d;
+  uint64_t ntotal = idx->refine_index_->ntotal;
+  uint8_t metric_type = (idx->refine_index_->metric_type == METRIC_L2) ? 0 : 1;
+  WRITE1(d);
+  WRITE1(ntotal);
+  WRITE1(metric_type);
+  WRITEXBVECTOR(idx->refine_index_->codes);
+}
+
 bool read_hakes_full_vecs(hakes::IOReader* f, HakesIndex* idx) {
   int32_t d;
+  uint64_t ntotal;
+  uint8_t metric_type;
+  READ1(d);
+  READ1(ntotal);
+  READ1(metric_type);
+  if (metric_type == 0) {
+    idx->refine_index_.reset(new faiss::IndexFlatLL2(d));
+  } else if (metric_type == 1) {
+    idx->refine_index_.reset(new faiss::IndexFlatLIP(d));
+  } else {
+    // printf("read_hakes_full_vecs: metric type not supported\n");
+    return false;
+  }
+  idx->refine_index_->ntotal = ntotal;
+  idx->refine_index_->is_trained = true;
+  idx->refine_index_->code_size = d * sizeof(float);
+  idx->refine_index_->codes.reserve(ntotal * idx->refine_index_->code_size * 2);
+  READXBVECTOR(idx->refine_index_->codes);
+  assert(idx->refine_index_->codes.size() ==
+         idx->refine_index_->ntotal * idx->refine_index_->code_size);
+  return true;
+}
+
+bool load_hakes_flatindex(hakes::IOReader* f, HakesFlatIndex* idx) {
+  uint32_t d;
   uint64_t ntotal;
   uint8_t metric_type;
   READ1(d);
