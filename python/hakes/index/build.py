@@ -3,6 +3,7 @@ import torch
 from torch.utils.data import RandomSampler, DataLoader
 from torch.optim.adamw import AdamW
 from tqdm import trange
+import time
 
 from typing import Dict
 
@@ -11,7 +12,8 @@ from .index import HakesIndex
 from .ivf import kmeans_ivf
 from .nn import get_nn
 from .opq import opq_train
-from .vt import HakesPreTransform
+from .vt import HakesPreTransform, HakesVecTransform
+from .pq import HakesPQ
 
 """
   HAKES training loops through the sampled vector - ANN pairs to update index parameters.
@@ -42,13 +44,34 @@ def init_hakes_params(
     Args:
       data: numpy array of shape (N, d)
     """
+    if vt_out_d % 2 != 0:
+        raise ValueError("vt_out_d must be divisible by 2")
+    # if data is over 256*256 samples then we need to sample
+    # 256*256 samples to train the OPQ
+    if data.shape[0] > 256 * 256:
+        data = data[np.random.choice(data.shape[0], 256 * 256, replace=False)]
+    print(f"sampled data shape for opq: {data.shape}")
+
     # OPQ
-    vt, pq = opq_train(data, vt_out_d, vt_out_d / 2)
+    A, pq = opq_train(data, vt_out_d, vt_out_d // 2, iter=20)
+    projected_data = data @ A
     # IVF
-    ivf = kmeans_ivf(data, nlist)
+    ivf_start = time.time()
+    ivf = kmeans_ivf(projected_data, nlist, niter=20)
+    print(f"IVF training time: {time.time() - ivf_start}")
+
     # HakesIndex
-    vt_list = torch.nn.ModuleList([vt])
-    return HakesIndex(HakesPreTransform(vt_list), pq, ivf, vt, metric)
+    d = data.shape[1]
+    return HakesIndex(
+        HakesPreTransform(
+            torch.nn.ModuleList(
+                [HakesVecTransform(d, vt_out_d, A.T, np.zeros(vt_out_d))]
+            )
+        ),
+        ivf,
+        HakesPQ(vt_out_d, vt_out_d // 2, nbits=4, codebook=pq, fixed_assignment=True),
+        metric,
+    )
 
 
 def train_hakes_params(
@@ -81,11 +104,6 @@ def train_hakes_params(
             "lr": lr_params["vt"],
         },
         {
-            "params": [p for n, p in param_optimizer if "ivf_vts" in n],
-            "weight_decay": 0.999,
-            "lr": lr_params["ivf_vt"] if "ivf_vt" in lr_params else 0,
-        },
-        {
             "params": [p for n, p in param_optimizer if "ivf" in n and "vts" not in n],
             "weight_decay": 0.999,
             "lr": lr_params["ivf"],
@@ -112,7 +130,6 @@ def train_hakes_params(
     scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lr_lambda)
 
     # train
-    global_step = 0
     for epoch in trange(epochs, desc="Epoch"):
         model.train()
         for step, sample in enumerate(dataloader):
@@ -120,7 +137,7 @@ def train_hakes_params(
             query_data = sample["query_data"].to(device)
             pos_data = sample["pos_data"].to(device)
             # check the effect of fix_emb='doc', cross_device_sample=True
-            batch_vt_loss, batch_pq_loss, batch_ivf_vt_loss, batch_ivf_loss = model(
+            batch_vt_loss, batch_pq_loss, batch_ivf_loss = model(
                 query_data=query_data,
                 pos_data=pos_data,
                 temperature=temperature,
@@ -135,25 +152,14 @@ def train_hakes_params(
                 if loss_weight["vt"] == "rescale"
                 else float(loss_weight["vt"])
             )
-            ivf_vt_rescale = (
-                (
-                    (batch_ivf_loss / batch_ivf_vt_loss).item() * loss_weight["ivf"]
-                    if batch_ivf_vt_loss != 0.0
-                    else 0
-                )
-                if loss_weight["ivf_vt"] == "rescale"
-                else float(loss_weight["ivf_vt"])
-            )
-
             batch_loss = (
                 vt_rescale * batch_vt_loss
                 + loss_weight["pq"] * batch_pq_loss
-                + ivf_vt_rescale * batch_ivf_vt_loss
                 + loss_weight["ivf"] * batch_ivf_loss
             )
             batch_loss.backward()
             print(
-                f"batch loss = {vt_rescale} * {batch_vt_loss} + {loss_weight['pq']} * {batch_pq_loss} + {ivf_vt_rescale} * {batch_ivf_vt_loss} + {loss_weight['ivf']} * {batch_ivf_loss}"
+                f"batch loss = {vt_rescale} * {batch_vt_loss} + {loss_weight['pq']} * {batch_pq_loss} + {loss_weight['ivf']} * {batch_ivf_loss}"
             )
             print(f"epoch {epoch} step {step} batch_loss: {batch_loss}")
 
@@ -165,17 +171,34 @@ def train_hakes_params(
             optimizer.zero_grad()
             model.ivf.normalize_centers()
 
-            global_step += 1
-            # if global_step % logging_steps == 0:
-            #     step_num = logging_steps
-            #     logging.info(
-            #         f"Step {step_num}: loss {loss / step_num:.4f}, vt_loss {vt_loss / step_num:.4f}, ivf_loss {ivf_loss / step_num:.4f}, pq_loss {pq_loss / step_num:.4f}"
-            #     )
-            #     loss, vt_loss, ivf_loss, pq_loss = 0.0, 0.0, 0.0, 0.0
-            #     ckpt_path = os.path.join(
-            #         checkpoint_path, f"epoch_{epoch}_step_{global_step}"
-            #     )
-            #     os.makedirs(ckpt_path, exist_ok=True)
-            #     model.save(ckpt_path)
-            #     logging.info(f"Checkpoint saved at {ckpt_path}")
-            # return  # early termination for testing
+
+def recenter_ivf(
+    model: HakesIndex,
+    data: np.ndarray,
+    sample_ratio: float = 0.01,
+):
+    # perform recenter just on cpu
+    model.to("cpu")
+    recenter_indices = np.random.choice(
+        data.shape[0], int(data.shape[0] * sample_ratio), replace=False
+    )
+    recenter_data = data[recenter_indices]
+    grouped_vectors = [[] for _ in range(model.ivf.nlist)]
+    batch_size = 1024 * 10
+    for i in trange(0, recenter_data.shape[0], batch_size):
+        batch = model.vts(
+            torch.tensor(recenter_data[i : min(i + batch_size, recenter_data.shape[0])])
+        )
+        assignment = model.ivf.get_assignment(batch)
+        for j in range(batch.shape[0]):
+            grouped_vectors[assignment[j].item()].append(i + j)
+    new_centers = []
+    for i in range(model.ivf.nlist):
+        vecs = recenter_data[grouped_vectors[i]]
+        vecs_tensor = torch.tensor(vecs)
+        vt_vecs = model.vts(vecs_tensor)
+        rep = torch.mean(vt_vecs, dim=0)
+        normalized_rep = rep / torch.norm(rep)
+        new_centers.append(normalized_rep.detach().cpu().numpy())
+    model.ivf.update_centers(np.array(new_centers))
+    return model

@@ -18,7 +18,6 @@ class HakesIndex(nn.Module):
         vts: Type[HakesPreTransform] = None,
         ivf: Type[HakesIVF] = None,
         pq: Type[HakesPQ] = None,
-        ivf_vts: Type[HakesPreTransform] = None,
         metric: str = "ip",
     ):
         super().__init__()
@@ -27,7 +26,6 @@ class HakesIndex(nn.Module):
         self.fixed_pretransform = None
         self.ivf = ivf
         self.pq = pq
-        self.ivf_vts = ivf_vts
 
         self.fixed_assignment = False
 
@@ -98,17 +96,7 @@ class HakesIndex(nn.Module):
         vts_str = f"VecTransform: {self.vts}\n" if self.vts is not None else ""
         ivf_str = f"IVF: {self.ivf}\n" if self.ivf is not None else ""
         pq_str = f"PQ: {self.pq}\n" if self.pq is not None else ""
-        ivf_vts_str = (
-            f"IVF VecTransform: {self.ivf_vts}\n" if self.ivf_vts is not None else ""
-        )
-        return (
-            super().__str__()
-            + vts_str
-            + ivf_str
-            + pq_str
-            + ivf_vts_str
-            + f"metric: {self.metric}"
-        )
+        return super().__str__() + vts_str + ivf_str + pq_str + f"metric: {self.metric}"
 
     def compute_score(self, q, cands, metric):
         # removed the temperature argument
@@ -194,7 +182,7 @@ class HakesIndex(nn.Module):
             transformed_query_data, pos_quantized, self.metric
         )
 
-        vt_loss, ivf_vt_loss, ivf_loss, pq_loss = 0, 0, 0, 0
+        vt_loss, ivf_loss, pq_loss = 0, 0, 0
 
         if loss_method == "hakes":
             vt_loss = self.kldiv_loss(origin_pos_score, vt_pos_score)
@@ -211,9 +199,9 @@ class HakesIndex(nn.Module):
             f"pq query recons loss: {self.recons_loss(transformed_query_data, query_quantized)}"
         )
 
-        print(f"losses: {vt_loss}, {pq_loss}, {ivf_vt_loss}, {ivf_loss}, ")
+        print(f"losses: {vt_loss}, {pq_loss}, {ivf_loss}, ")
 
-        return vt_loss, pq_loss, ivf_vt_loss, ivf_loss
+        return vt_loss, pq_loss, ivf_loss
 
     def report_distance(
         self, query_data: torch.FloatTensor, neighbor_data: torch.FloatTensor, mode: str
@@ -230,16 +218,10 @@ class HakesIndex(nn.Module):
             return self.compute_score(
                 transformed_query_data, transformed_neighbor_data, self.metric
             )
-        elif mode == "ivf_vt":
-            ivf_transformed_query_data = self.ivf_vts(query_data)
-            ivf_transformed_neighbor_data = self.ivf_vts(neighbor_data)
-            return self.compute_score(
-                ivf_transformed_query_data, ivf_transformed_neighbor_data, self.metric
-            )
         elif mode == "ivf":
-            neighbor_centers = self.ivf.select_centers(self.ivf_vts(neighbor_data))
+            neighbor_centers = self.ivf.select_centers(self.vts(neighbor_data))
             return self.compute_score(
-                self.ivf_vts(query_data), neighbor_centers, self.metric
+                self.vts(query_data), neighbor_centers, self.metric
             )
         elif mode == "pq":
             if self.fixed_assignment:

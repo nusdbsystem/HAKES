@@ -7,8 +7,6 @@ import numpy as np
 from sklearn.cluster import KMeans
 
 
-from typing import Dict
-
 from .debug import centroids_to_str
 
 
@@ -106,7 +104,8 @@ class HakesIVF(torch.nn.Module):
                 ).tobytes()
             )
 
-def kmeans_ivf (data: np.ndarray, nlist: int, niter: int = 300):
+
+def kmeans_ivf(data: np.ndarray, nlist: int, niter: int = 30):
     """
     K-means clustering for IVF initialization
 
@@ -118,5 +117,6 @@ def kmeans_ivf (data: np.ndarray, nlist: int, niter: int = 300):
     _, d = data.shape
     kmeans = KMeans(n_clusters=nlist, max_iter=niter)
     kmeans.fit(data)
+    print(f"iteration: {kmeans.n_iter_}")
     centroids = kmeans.cluster_centers_
     return HakesIVF(d, nlist, centroids)

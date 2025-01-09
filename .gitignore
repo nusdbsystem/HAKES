@@ -35,6 +35,7 @@
 
 # python
 __pycache__
+*.egg-info
 
 # build
 install

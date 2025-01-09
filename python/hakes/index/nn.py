@@ -50,7 +50,8 @@ def get_nn(
         query = query.to(device)
         data = data.to(device)
 
-    step_size = 10
+    nn_idx_all = torch.empty((query.shape[0], k), dtype=torch.long)
+    step_size = 1000
     for i in tqdm.trange(0, sample_size, step_size):
         if distance == "ip":
             dist = torch.mm(query[i : i + step_size], data.t())
@@ -58,18 +59,15 @@ def get_nn(
             # distance == 'l2':
             dist = torch.cdist(query[i : i + step_size], data)
 
-        if i == 0:
-            dist_all = dist
+        if distance == "ip":
+            _, nn_idx = torch.topk(dist, k=k, dim=1, largest=True)
         else:
-            dist_all = torch.cat((dist_all, dist), dim=0)
+            # distance == 'l2':
+            _, nn_idx = torch.topk(-dist, k=k, dim=1, largest=True)
 
-    print(f"dist_all shape: {dist_all.shape}")
-    print(dist_all)
+        nn_idx_all[i : i + step_size] = nn_idx
 
-    if distance == "ip":
-        _, nn_idx = torch.topk(dist_all, k=k, dim=1, largest=True)
-    else:
-        # distance == 'l2':
-        _, nn_idx = torch.topk(-dist_all, k=k, dim=1, largest=True)
+    print(f"dist_all shape: {nn_idx_all.shape}")
+    print(nn_idx_all)
 
-    return query.numpy(), nn_idx.numpy()
+    return query.numpy(), nn_idx_all.numpy()
