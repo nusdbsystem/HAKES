@@ -33,6 +33,10 @@
 # vscode
 .vscode
 
+# python
+__pycache__
+*.egg-info
+
 # build
 install
 build
