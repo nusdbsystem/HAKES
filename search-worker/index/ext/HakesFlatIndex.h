@@ -50,7 +50,7 @@ class HakesFlatIndex : public HakesCollection {
 
   bool AddBase(int n, int d, const float* vecs,
                const faiss::idx_t* ids) override {
-    return true;
+    return AddWithIds(n, d, vecs, ids, nullptr, nullptr, nullptr);
   }
 
   bool Search(int n, int d, const float* query, const HakesSearchParams& params,
@@ -61,7 +61,9 @@ class HakesFlatIndex : public HakesCollection {
               faiss::idx_t* k_base_count, faiss::idx_t* base_labels,
               float* base_distances, std::unique_ptr<float[]>* distances,
               std::unique_ptr<faiss::idx_t[]>* labels) override {
-    return true;
+    // not implemented
+    assert(false);
+    return false;
   }
 
   bool Checkpoint(hakes::IOWriter* ff, hakes::IOWriter* rf) const override;
