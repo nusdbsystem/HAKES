@@ -21,6 +21,8 @@
 #include "message/keyservice_worker.h"
 #include "message/searchservice.h"
 #include "search-worker/common/workerImpl.h"
+#include "search-worker/index/ext/HakesFlatIndex.h"
+#include "search-worker/index/ext/HakesIndex.h"
 #include "search-worker/index/ext/IndexFlatL.h"
 #include "search-worker/index/ext/IndexIVFPQFastScanL.h"
 #include "utils/base64.h"
@@ -212,12 +214,11 @@ std::string encode_hex_floats(const float* vecs, size_t count) {
 namespace search_worker {
 
 bool WorkerImpl::Initialize(hakes::IOReader* ff, hakes::IOReader* rf,
-                            hakes::IOReader* uf, bool keep_pa,
-                            int cluster_size, int server_id) {
+                            hakes::IOReader* uf, bool keep_pa, int cluster_size,
+                            int server_id) {
   // index_.reset(new faiss::IndexFlatL(4, faiss::METRIC_INNER_PRODUCT));
   index_.reset(new faiss::HakesIndex());
   index_->Initialize(ff, rf, uf, keep_pa);
-  index_->base_index_->use_balanced_assign_ = false;
   cluster_size_ = cluster_size;
   server_id_ = server_id;
   return true;

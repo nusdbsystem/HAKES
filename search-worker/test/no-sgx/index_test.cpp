@@ -19,16 +19,21 @@
 #include <string.h>
 
 #include <algorithm>
+#include <fstream>
 #include <iostream>
 #include <memory>
 
 #include "message/searchservice.h"
 #include "search-worker/common/worker.h"
 #include "search-worker/common/workerImpl.h"
+#include "search-worker/index/ext/HakesCollection.h"
+#include "search-worker/index/ext/HakesFlatIndex.h"
+#include "search-worker/index/ext/HakesIndex.h"
 #include "utils/data_loader.h"
 #include "utils/fileutil.h"
 
 struct Config {
+  std::string type = "hakes";
   size_t data_n = 1183514;
   size_t data_num_query = 1000;
   size_t data_dim = 200;
@@ -45,36 +50,64 @@ struct Config {
   std::string save_path = ".";
 };
 
+std::string trim(std::string origin) {
+  size_t start = origin.find_first_not_of(" \t\n\r\"");
+  auto result = (start == std::string::npos) ? "" : origin.substr(start);
+  size_t end = result.find_last_not_of(" \t\n\r\"");
+  return (end == std::string::npos) ? "" : result.substr(0, end + 1);
+}
+
 Config parse_config(int argc, char** argv) {
-  Config cfg;
-  if (argc < 12) {
-    std::cout
-        << "Usage: " << argv[0]
-        << " DATA_N DATA_NUM_QUERY DATA_DIM SEARCH_K DATA_GROUNDTRUTH_LEN "
-           "DATA_TRAIN_PATH DATA_QUERY_PATH DATA_GROUNDTRUTH_PATH NPROBE "
-           "K_FACTOR INDEX_PATH UPDATE_PATH SAVE_PATH"
-        << std::endl;
+  if (argc < 1) {
+    std::cout << "Usage: " << argv[0] << " CONFIG_FILE" << std::endl;
+    exit(1);
+  }
+  std::ifstream file(argv[1]);
+
+  if (!file.is_open()) {
+    std::cerr << "Failed to open file!" << std::endl;
     exit(1);
   }
 
-  cfg.data_n = std::stoul(argv[1]);
-  cfg.data_num_query = std::stoul(argv[2]);
-  cfg.data_dim = std::stoul(argv[3]);
-  cfg.search_k = std::stoul(argv[4]);
-  cfg.data_groundtruth_len = std::stoul(argv[5]);
-  cfg.data_train_path = argv[6];
-  cfg.data_query_path = argv[7];
-  cfg.data_groundtruth_path = argv[8];
-  cfg.nprobe = std::stoi(argv[9]);
-  cfg.k_factor = std::stoi(argv[10]);
-  cfg.index_path = argv[11];
-  if (argc > 12) {
-    cfg.update_path = argv[12];
+  std::string line;
+  Config cfg;
+  while (std::getline(file, line)) {
+    auto idx = line.find("=");
+    auto key = trim(line.substr(0, idx));
+    auto val = trim(line.substr(idx + 1));
+    if (key.compare("data_n") == 0) {
+      cfg.data_n = stoi(val);
+    } else if (key.compare("data_num_query") == 0) {
+      cfg.data_num_query = stoi(val);
+    } else if (key.compare("data_dim") == 0) {
+      cfg.data_dim = stoi(val);
+    } else if (key.compare("search_k") == 0) {
+      cfg.search_k = stoi(val);
+    } else if (key.compare("data_groundtruth_len") == 0) {
+      cfg.data_groundtruth_len = stoi(val);
+    } else if (key.compare("data_train_path") == 0) {
+      cfg.data_train_path = val;
+    } else if (key.compare("data_query_path") == 0) {
+      cfg.data_query_path = val;
+    } else if (key.compare("data_groundtruth_path") == 0) {
+      cfg.data_groundtruth_path = val;
+    } else if (key.compare("nprobe") == 0) {
+      cfg.nprobe = stoi(val);
+    } else if (key.compare("k_factor") == 0) {
+      cfg.k_factor = stoi(val);
+    } else if (key.compare("index_path") == 0) {
+      cfg.index_path = val;
+    } else if (key.compare("update_path") == 0) {
+      cfg.update_path = val;
+    } else if (key.compare("save_path") == 0) {
+      cfg.save_path = val;
+    } else if (key.compare("type") == 0) {
+      cfg.type = val;
+    }
   }
-  if (argc > 13) {
-    cfg.save_path = argv[13];
-  }
+  file.close();
 
+  std::cout << "TYPE: " << cfg.type << std::endl;
   std::cout << "DATA_N: " << cfg.data_n << std::endl;
   std::cout << "DATA_NUM_QUERY: " << cfg.data_num_query << std::endl;
   std::cout << "DATA_DIM: " << cfg.data_dim << std::endl;
@@ -87,14 +120,75 @@ Config parse_config(int argc, char** argv) {
             << std::endl;
   std::cout << "NPROBE: " << cfg.nprobe << std::endl;
   std::cout << "K_FACTOR: " << cfg.k_factor << std::endl;
+  std::cout << "SAVE_PATH: " << cfg.save_path << std::endl;
   std::cout << "INDEX_PATH: " << cfg.index_path << std::endl;
   std::cout << "UPDATE_PATH: " << cfg.update_path << std::endl;
   return cfg;
 }
 
-int main(int argc, char* argv[]) {
-  // Config cfg;
-  Config cfg = parse_config(argc, argv);
+int testHakesFlatIndex(Config cfg) {
+  int n = cfg.data_n;
+  int d = cfg.data_dim;
+  int nq = cfg.data_num_query;
+  int k = cfg.search_k;
+  auto metric = faiss::MetricType::METRIC_L2;
+
+  // generate vectors
+  float* xb = new float[d * n];
+  float* xq = new float[d * nq];
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < d; j++) xb[d * i + j] = drand48();
+    xb[d * i] += i / 1000.;
+  }
+  for (int i = 0; i < nq; i++) {
+    for (int j = 0; j < d; j++) xq[d * i + j] = drand48();
+    xq[d * i] += i / 1000.;
+  }
+  std::cout << "\nData generated ..." << std::endl;
+
+  // build index
+  std::unique_ptr<faiss::HakesFlatIndex> index(
+      new faiss::HakesFlatIndex(d, metric));
+  auto xids = std::make_unique<faiss::idx_t[]>(n);
+  for (int i = 0; i < n; i++) {
+    xids[i] = i;
+  }
+  std::unique_ptr<faiss::idx_t[]> assign = std::make_unique<faiss::idx_t[]>(n);
+  int vecs_t_d;
+  std::unique_ptr<float[]> vecs_t;
+  index->AddWithIds(n, d, xb, xids.get(), assign.get(), &vecs_t_d, &vecs_t);
+  std::cout << "Index: " << index->to_string() << std::endl;
+
+  // search
+  faiss::HakesSearchParams param;
+  param.k = k;
+  param.metric_type = metric;
+  std::unique_ptr<float[]> distances;
+  std::unique_ptr<faiss::idx_t[]> labels;
+  index->Search(nq, d, xq, param, &distances, &labels);
+  std::cout << "Search complete!" << std::endl;
+
+  // save index
+  auto save_rindex_path = cfg.save_path + "/rindex.bin";
+  {
+    auto rf = hakes::FileIOWriter(save_rindex_path.c_str());
+    index->Checkpoint(nullptr, &rf);
+  }
+  std::cout << "Save complete!" << std::endl;
+
+  // reload index
+  {
+    auto rf = hakes::FileIOReader(save_rindex_path.c_str());
+    std::unique_ptr<faiss::HakesFlatIndex> index2(
+        new faiss::HakesFlatIndex(d, metric));
+    index2->Initialize(nullptr, &rf, nullptr);
+  }
+  std::cout << "Load complete!" << std::endl;
+
+  return 0;
+}
+
+int testHakesIndex(Config cfg) {
   int n = cfg.data_n;
   int d = cfg.data_dim;
   int nq = cfg.data_num_query;
@@ -267,7 +361,6 @@ int main(int argc, char* argv[]) {
                        cfg.data_groundtruth_len, cfg.data_num_query);
 
   // add
-
   auto xids = std::make_unique<faiss::idx_t[]>(n);
   for (int i = 0; i < n; i++) {
     xids[i] = i;
@@ -420,5 +513,21 @@ int main(int argc, char* argv[]) {
   delete[] data;
   delete[] query;
   delete[] groundtruth;
+  return 0;
+}
+
+int main(int argc, char* argv[]) {
+  // Config cfg;
+  Config cfg = parse_config(argc, argv);
+
+  if (cfg.type.compare("hakes") == 0) {
+    testHakesIndex(cfg);
+  } else if (cfg.type.compare("hakesflat") == 0) {
+    testHakesFlatIndex(cfg);
+  } else {
+    std::cerr << "Unknown index type. Please input hakes|hakesflat"
+              << std::endl;
+    exit(1);
+  }
   return 0;
 }

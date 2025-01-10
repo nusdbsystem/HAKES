@@ -21,7 +21,7 @@
 
 #include "search-worker/common/worker.h"
 #include "search-worker/index/Index.h"
-#include "search-worker/index/ext/HakesIndex.h"
+#include "search-worker/index/ext/HakesCollection.h"
 #include "search-worker/index/ext/IndexFlatL.h"
 
 namespace search_worker {
@@ -50,7 +50,7 @@ class WorkerImpl : public Worker {
  private:
   int cluster_size_;
   int server_id_;
-  std::unique_ptr<faiss::HakesIndex> index_;
+  std::unique_ptr<faiss::HakesCollection> index_;
 };
 
 }  // namespace search_worker

@@ -19,6 +19,7 @@
 
 #include "search-worker/index/IndexFlat.h"
 #include "search-worker/index/VectorTransform.h"
+#include "search-worker/index/ext/HakesFlatIndex.h"
 #include "search-worker/index/ext/HakesIndex.h"
 #include "search-worker/index/ext/IdMap.h"
 #include "utils/io.h"
@@ -41,6 +42,9 @@ void save_hakes_rindex(hakes::IOWriter* rf, const HakesIndex* idx);
 
 void save_hakes_index(hakes::IOWriter* ff, hakes::IOWriter* rf,
                       const HakesIndex* idx);
+
+bool load_hakes_flatindex(hakes::IOReader* f, HakesFlatIndex* idx);
+void save_hakes_flatindex(hakes::IOWriter* f, const HakesFlatIndex* idx);
 
 }  // namespace faiss
 

@@ -85,6 +85,7 @@ Objects := src/no-sgx/worker.o \
 	src/no-sgx/searchservice.o \
 	src/no-sgx/index-build/ext/BlockInvertedListsL.o \
 	src/no-sgx/index-build/ext/HakesIndex.o \
+	src/no-sgx/index-build/ext/HakesFlatIndex.o \
 	src/no-sgx/index-build/ext/IdMap.o \
 	src/no-sgx/index-build/ext/index_io_ext.o \
 	src/no-sgx/index-build/ext/IndexFlatCodesL.o \
@@ -127,14 +128,14 @@ libworker.a: ${Objects}
 	ar -rcs $@ $^
 	@echo "LINK => $@"
 
-app_no_sgx: src/no-sgx/app.cc libworker.a
-	$(CXX) ${App_Cpp_Flags} $< -L. -l:libworker.a -o $@ ${COMMON_LINK_FLAGS} $(App_Link_Flags)
+app_no_sgx: test/no-sgx/app.cc libworker.a
+	$(CXX) ${App_Cpp_Flags} $< -L. -l:libworker.a -o test/no-sgx/$@ ${COMMON_LINK_FLAGS} $(App_Link_Flags)
 
-app3_no_sgx: src/no-sgx/app3.cc libworker.a
-	$(CXX) ${App_Cpp_Flags} $< -L. -l:libworker.a -o $@ ${COMMON_LINK_FLAGS} $(App_Link_Flags)
+app3_no_sgx: test/no-sgx/app3.cc libworker.a
+	$(CXX) ${App_Cpp_Flags} $< -L. -l:libworker.a -o test/no-sgx/$@ ${COMMON_LINK_FLAGS} $(App_Link_Flags)
 
-index_test: src/no-sgx/index_test.cpp libworker.a
-	$(CXX) ${App_Cpp_Flags} $< -L. -l:libworker.a -o $@ ${COMMON_LINK_FLAGS} $(App_Link_Flags)
+index_test: test/no-sgx/index_test.cpp libworker.a
+	$(CXX) ${App_Cpp_Flags} $< -L. -l:libworker.a -o test/no-sgx/$@ ${COMMON_LINK_FLAGS} $(App_Link_Flags)
 
 ## Build search server ##
 

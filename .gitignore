@@ -53,10 +53,12 @@ search_server
 search_server_no_sgx
 hakes_server
 hakes_server_no_sgx
+index_test
 
 # test
 tmp
 data
+*.bin
 
 # SGX
 Enclave_u.h

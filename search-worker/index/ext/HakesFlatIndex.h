@@ -14,52 +14,33 @@
  * limitations under the License.
  */
 
-#ifndef HAKES_SEARCHWORKER_INDEX_EXT_HAKESINDEX_H_
-#define HAKES_SEARCHWORKER_INDEX_EXT_HAKESINDEX_H_
+#ifndef HAKES_SEARCHWORKER_INDEX_EXT_HAKESFLATINDEX_H_
+#define HAKES_SEARCHWORKER_INDEX_EXT_HAKESFLATINDEX_H_
 
-#include "search-worker/index/VectorTransform.h"
 #include "search-worker/index/ext/HakesCollection.h"
-#include "search-worker/index/ext/IdMap.h"
 #include "search-worker/index/ext/IndexFlatL.h"
-#include "search-worker/index/ext/IndexIVFPQFastScanL.h"
 
 namespace faiss {
 
-class HakesIndex : public HakesCollection {
+class HakesFlatIndex : public HakesCollection {
  public:
-  HakesIndex() { pthread_rwlock_init(&mapping_mu_, nullptr); }
-  ~HakesIndex() {
-    for (auto vt : vts_) {
-      delete vt;
-      vt = nullptr;
-    }
-    for (auto vt : q_vts_) {
-      delete vt;
-      vt = nullptr;
-    }
-    if (use_ivf_sq_) {
-      delete cq_;
-      cq_ = nullptr;
-    }
-    if (q_cq_) {
-      delete q_cq_;
-      q_cq_ = nullptr;
-    }
-    pthread_rwlock_destroy(&mapping_mu_);
+  HakesFlatIndex(int d, faiss::MetricType metric) {
+    refine_index_.reset(new faiss::IndexFlatL(d, metric));
   }
+  ~HakesFlatIndex() = default;
 
   // delete copy constructors and assignment operators
-  HakesIndex(const HakesIndex&) = delete;
-  HakesIndex& operator=(const HakesIndex&) = delete;
+  HakesFlatIndex(const HakesFlatIndex&) = delete;
+  HakesFlatIndex& operator=(const HakesFlatIndex&) = delete;
   // delete move constructors and assignment operators
-  HakesIndex(HakesIndex&&) = delete;
-  HakesIndex& operator=(HakesIndex&&) = delete;
+  HakesFlatIndex(HakesFlatIndex&&) = delete;
+  HakesFlatIndex& operator=(HakesFlatIndex&&) = delete;
 
   // bool Initialize(const std::string& path);
   bool Initialize(hakes::IOReader* ff, hakes::IOReader* rf, hakes::IOReader* uf,
                   bool keep_pa = false) override;
 
-  void UpdateIndex(const HakesCollection* other) override;
+  void UpdateIndex(const HakesCollection* other) override { return; }
 
   // it is assumed that receiving engine shall store the full vecs of all
   // inputs.
@@ -68,7 +49,9 @@ class HakesIndex : public HakesCollection {
                   std::unique_ptr<float[]>* vecs_t) override;
 
   bool AddBase(int n, int d, const float* vecs,
-               const faiss::idx_t* ids) override;
+               const faiss::idx_t* ids) override {
+    return AddWithIds(n, d, vecs, ids, nullptr, nullptr, nullptr);
+  }
 
   bool Search(int n, int d, const float* query, const HakesSearchParams& params,
               std::unique_ptr<float[]>* distances,
@@ -77,35 +60,23 @@ class HakesIndex : public HakesCollection {
   bool Rerank(int n, int d, const float* query, int k,
               faiss::idx_t* k_base_count, faiss::idx_t* base_labels,
               float* base_distances, std::unique_ptr<float[]>* distances,
-              std::unique_ptr<faiss::idx_t[]>* labels) override;
+              std::unique_ptr<faiss::idx_t[]>* labels) override {
+    // not implemented
+    assert(false);
+    return false;
+  }
 
   bool Checkpoint(hakes::IOWriter* ff, hakes::IOWriter* rf) const override;
 
-  bool GetParams(hakes::IOWriter* pf) const override;
+  bool GetParams(hakes::IOWriter* pf) const override { return true; }
 
-  bool UpdateParams(hakes::IOReader* pf) override;
+  bool UpdateParams(hakes::IOReader* pf) override { return true; }
 
   std::string to_string() const override;
 
-  //  private:
- public:
-  std::string index_path_;
-  bool use_ivf_sq_ = false;
-  bool use_refine_sq_ = false;
-  std::vector<faiss::VectorTransform*> vts_;
-  bool has_q_index_ = false;
-  std::vector<faiss::VectorTransform*> q_vts_;
-  faiss::Index* cq_ = nullptr;
-  faiss::Index* q_cq_ = nullptr;
-  std::unique_ptr<faiss::IndexIVFPQFastScanL> base_index_;
-  mutable pthread_rwlock_t mapping_mu_;
-  std::unique_ptr<faiss::IDMap> mapping_;
   std::unique_ptr<faiss::IndexFlatL> refine_index_;
-
-  bool keep_pa_ = false;
-  std::unordered_map<faiss::idx_t, faiss::idx_t> pa_mapping_;
 };
 
 }  // namespace faiss
 
-#endif  // HAKES_SEARCHWORKER_INDEX_EXT_HAKESINDEX_H_
+#endif  // HAKES_SEARCHWORKER_INDEX_EXT_HAKESFLATINDEX_H_
