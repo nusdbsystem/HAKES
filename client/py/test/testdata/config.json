@@ -1,0 +1,12 @@
+{
+    "search_worker_addrs": [
+        "127.0.0.1:2800"
+    ],
+    "preferred_search_worker": 0,
+    "hakes_addr": "127.0.0.1:8080",
+    "embed_endpoint_type": "openai",
+    "embed_endpoint_addr": "",
+    "embed_endpoint_config": "",
+    "store_type": "hakes",
+    "store_addr": "127.0.0.1:2600"
+}
