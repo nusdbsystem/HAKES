@@ -22,7 +22,7 @@ App_Link_Flags = -lrt -pthread -lm -lcrypto -lssl -fopenmp -ldl -L$(MKL_LIBRARY_
 
 .PHONY: all clean build_dir
 
-all: app_no_sgx search_server_no_sgx app3_no_sgx index_test
+all: build_dir app_no_sgx search_server_no_sgx app3_no_sgx index_test
 
 build_dir:
 	@echo "Creating build directory"
