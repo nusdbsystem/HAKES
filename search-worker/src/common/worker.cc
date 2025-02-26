@@ -211,11 +211,14 @@ std::string encode_hex_floats(const float* vecs, size_t count) {
 
 }  // anonymous namespace
 
+
 namespace search_worker {
 
-bool WorkerImpl::Initialize(hakes::IOReader* ff, hakes::IOReader* rf,
+bool WorkerImpl::Initialize(std::string collection_name, hakes::IOReader* ff, hakes::IOReader* rf,
                             hakes::IOReader* uf, bool keep_pa, int cluster_size,
                             int server_id) {
+  main_indexes[collection_name] = std::make_unique<faiss::HakesIndex>();
+  auto& index_ = main_indexes.at(collection_name);
   // index_.reset(new faiss::IndexFlatL(4, faiss::METRIC_INNER_PRODUCT));
   index_.reset(new faiss::HakesIndex());
   index_->Initialize(ff, rf, uf, keep_pa);
@@ -224,12 +227,15 @@ bool WorkerImpl::Initialize(hakes::IOReader* ff, hakes::IOReader* rf,
   return true;
 }
 
-bool WorkerImpl::IsInitialized() { return index_ != nullptr; }
+bool WorkerImpl::IsInitialized(std::string collection_name) {
+  return main_indexes.find(collection_name) != main_indexes.end();
+}
 
 bool WorkerImpl::AddWithIds(const char* req, size_t req_len, char* resp,
                             size_t resp_len) {
   // decode the message
   hakes::SearchWorkerAddRequest add_req;
+  hakes::SearchWorkerAddResponse add_resp;
   if (!hakes::decode_search_worker_add_request(std::string{req, req_len},
                                                &add_req)) {
     return false;
@@ -239,6 +245,25 @@ bool WorkerImpl::AddWithIds(const char* req, size_t req_len, char* resp,
       std::unique_ptr<faiss::idx_t[]>(new faiss::idx_t[1]);
   int vecs_t_d = 0;
   std::unique_ptr<float[]> transformed_vecs;
+
+  // parse collection_name
+  auto collection_name = add_req.collection_name;
+  auto it = main_indexes.find(collection_name);
+  if (it == main_indexes.end()) {
+    add_resp.status = false;
+    add_resp.msg = "collection does not exist error";
+    std::string encoded_response =
+        hakes::encode_search_worker_add_response(add_resp);
+    assert(encoded_response.size() < resp_len);
+    memcpy(resp, encoded_response.c_str(), encoded_response.size());
+    resp[encoded_response.size()] = '\0';
+    return false;
+  }
+  auto& index_ = it->second;
+#ifndef USE_SGX
+  std::cout << "index: " << index_->to_string() << std::endl;
+  printf("Rerank request: %s\n", req);
+#endif  // USE_SGX
 
   // parse ids and vecs
   size_t parsed_count;
@@ -264,7 +289,6 @@ bool WorkerImpl::AddWithIds(const char* req, size_t req_len, char* resp,
                                assign.get(), &vecs_t_d, &transformed_vecs)
           : index_->AddBase(1, add_req.d, vecs.get(), ids.get());
 
-  hakes::SearchWorkerAddResponse add_resp;
   if (!success) {
     add_resp.status = false;
     add_resp.msg = "add error";
@@ -288,13 +312,7 @@ bool WorkerImpl::AddWithIds(const char* req, size_t req_len, char* resp,
 
 bool WorkerImpl::Search(const char* req, size_t req_len, char* resp,
                         size_t resp_len) {
-#ifndef USE_SGX
-  std::cout << "index: " << index_->to_string() << std::endl;
-  printf("search request %s\n", req);
-#endif  // USE_SGX
-
   hakes::SearchWorkerSearchResponse search_resp;
-
   hakes::SearchWorkerSearchRequest search_req;
   if (!hakes::decode_search_worker_search_request(std::string{req, req_len},
                                                   &search_req)) {
@@ -307,6 +325,25 @@ bool WorkerImpl::Search(const char* req, size_t req_len, char* resp,
     resp[encoded_response.size()] = '\0';
     return false;
   }
+
+  // parse collection_name
+  auto collection_name = search_req.collection_name;
+  auto it = main_indexes.find(collection_name);
+  if (it == main_indexes.end()) {
+    search_resp.status = false;
+    search_resp.msg = "collection does not exist error";
+    std::string encoded_response =
+        hakes::encode_search_worker_search_response(search_resp);
+    assert(encoded_response.size() < resp_len);
+    memcpy(resp, encoded_response.c_str(), encoded_response.size());
+    resp[encoded_response.size()] = '\0';
+    return false;
+  }
+  auto& index_ = it->second;
+#ifndef USE_SGX
+  std::cout << "index: " << index_->to_string() << std::endl;
+  printf("Rerank request: %s\n", req);
+#endif  // USE_SGX
 
   // parse ids and vecs
   size_t parsed_count;
@@ -354,12 +391,6 @@ bool WorkerImpl::Search(const char* req, size_t req_len, char* resp,
 bool WorkerImpl::Rerank(const char* req, size_t req_len, char* resp,
                         size_t resp_len) {
   hakes::SearchWorkerRerankResponse rerank_resp;
-
-#ifndef USE_SGX
-  std::cout << "index: " << index_->to_string() << std::endl;
-  printf("Rerank request: %s\n", req);
-#endif  // USE_SGX
-
   hakes::SearchWorkerRerankRequest rerank_req;
   if (!hakes::decode_search_worker_rerank_request(std::string{req, req_len},
                                                   &rerank_req)) {
@@ -375,6 +406,25 @@ bool WorkerImpl::Rerank(const char* req, size_t req_len, char* resp,
     resp[encoded_response.size()] = '\0';
     return false;
   }
+
+  // parse collection_name
+  auto collection_name = rerank_req.collection_name;
+  auto it = main_indexes.find(collection_name);
+  if (it == main_indexes.end()) {
+    rerank_resp.status = false;
+    rerank_resp.msg = "collection does not exist error";
+    std::string encoded_response =
+        hakes::encode_search_worker_rerank_response(rerank_resp);
+    assert(encoded_response.size() < resp_len);
+    memcpy(resp, encoded_response.c_str(), encoded_response.size());
+    resp[encoded_response.size()] = '\0';
+    return false;
+  }
+  auto& index_ = it->second;
+#ifndef USE_SGX
+  std::cout << "index: " << index_->to_string() << std::endl;
+  printf("Rerank request: %s\n", req);
+#endif  // USE_SGX
 
   // parse ids
   size_t parsed_count;

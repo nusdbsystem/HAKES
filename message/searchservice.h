@@ -31,6 +31,7 @@ std::unique_ptr<int64_t[]> decode_hex_int64s(const std::string& vecs_str, size_t
 
 struct SearchWorkerAddRequest {
   int d;
+  std::string collection_name;
   std::string vecs;
   std::string ids;
   std::string user_id;
@@ -58,6 +59,7 @@ struct SearchWorkerSearchRequest {
   int nprobe;
   int k_factor;
   uint8_t metric_type;
+  std::string collection_name;
   std::string vecs;
   std::string user_id;
   std::string ks_addr;
@@ -85,6 +87,7 @@ struct SearchWorkerRerankRequest {
   int k;
   int nprobe;
   uint8_t metric_type;
+  std::string collection_name;
   std::string vecs;
   std::string input_ids;
   std::string user_id;

@@ -31,10 +31,10 @@ class WorkerImpl : public Worker {
   WorkerImpl() = default;
   virtual ~WorkerImpl() {}
 
-  bool Initialize(hakes::IOReader* ff, hakes::IOReader* rf, hakes::IOReader* uf,
+  bool Initialize(std::string collection_name, hakes::IOReader* ff, hakes::IOReader* rf, hakes::IOReader* uf,
                   bool keep_pa, int cluster_size, int server_id) override;
 
-  bool IsInitialized() override;
+  bool IsInitialized(std::string collection_name) override;
 
   bool AddWithIds(const char* req, size_t req_len, char* resp,
                   size_t resp_len) override;
@@ -50,7 +50,7 @@ class WorkerImpl : public Worker {
  private:
   int cluster_size_;
   int server_id_;
-  std::unique_ptr<faiss::HakesCollection> index_;
+  std::unordered_map<std::string, std::unique_ptr<faiss::HakesCollection>> main_indexes;
 };
 
 }  // namespace search_worker

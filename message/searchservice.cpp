@@ -54,6 +54,7 @@ std::string encode_search_worker_add_request(
     const SearchWorkerAddRequest& request) {
   json::JSON ret;
   ret["d"] = request.d;
+  ret["collection_name"] = request.collection_name;
   ret["vecs"] = request.vecs;
   ret["ids"] = request.ids;
   if (!request.ks_addr.empty()) {
@@ -68,6 +69,7 @@ bool decode_search_worker_add_request(const std::string& request_str,
                                       SearchWorkerAddRequest* request) {
   auto input = json::JSON::Load(request_str);
   request->d = input["d"].ToInt();
+  request->collection_name = input["collection_name"].ToString();
   request->vecs = input["vecs"].ToString();
   request->ids = input["ids"].ToString();
   if (input.hasKey("ks_addr")) {
@@ -104,6 +106,7 @@ std::string encode_search_worker_search_request(
   ret["nprobe"] = request.nprobe;
   ret["k_factor"] = request.k_factor;
   ret["metric_type"] = request.metric_type;
+  ret["collection_name"] = request.collection_name;
   ret["vecs"] = request.vecs;
   if (!request.ks_addr.empty()) {
     ret["user_id"] = request.user_id;
@@ -121,6 +124,7 @@ bool decode_search_worker_search_request(const std::string& request_str,
   request->nprobe = input["nprobe"].ToInt();
   request->k_factor = input["k_factor"].ToInt();
   request->metric_type = input["metric_type"].ToInt();
+  request->collection_name = input["collection_name"].ToString();
   request->vecs = input["vecs"].ToString();
   if (input.hasKey("ks_addr")) {
     request->user_id = input["user_id"].ToString();
@@ -157,6 +161,7 @@ std::string encode_search_worker_rerank_request(
   ret["k"] = request.k;
   ret["nprobe"] = request.nprobe;
   ret["metric_type"] = request.metric_type;
+  ret["collection_name"] = request.collection_name;
   ret["vecs"] = request.vecs;
   ret["input_ids"] = request.input_ids;
   if (!request.ks_addr.empty()) {
@@ -174,6 +179,7 @@ bool decode_search_worker_rerank_request(const std::string& request_str,
   request->k = input["k"].ToInt();
   request->nprobe = input["nprobe"].ToInt();
   request->metric_type = input["metric_type"].ToInt();
+  request->collection_name = input["collection_name"].ToString();
   request->vecs = input["vecs"].ToString();
   request->input_ids = input["input_ids"].ToString();
   if (input.hasKey("ks_addr")) {
