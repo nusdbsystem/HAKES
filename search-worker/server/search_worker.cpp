@@ -31,7 +31,7 @@ bool SearchWorker::Initialize() {
     return true;
   }
 
-  if (!worker_->IsInitialized()) {
+  if (!worker_->IsInitialized("main")) {
     return false;
   }
 

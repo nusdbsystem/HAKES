@@ -28,12 +28,12 @@ class Worker {
   Worker() = default;
   virtual ~Worker() {}
 
-  virtual bool Initialize(std::string collection_name, hakes::IOReader* ff, hakes::IOReader* rf,
+  virtual bool Initialize(const std::string &collection_name, hakes::IOReader* ff, hakes::IOReader* rf,
                           hakes::IOReader* uf, bool keep_pa, int cluster_size,
                           int server_id) = 0;
 
   // the worker shall be pre-initialized before installing to a search worker
-  virtual bool IsInitialized(std::string collection_name) = 0;
+  virtual bool IsInitialized(const std::string &collection_name) = 0;
 
   virtual bool AddWithIds(const char* req, size_t req_len, char* resp,
                           size_t resp_len) = 0;

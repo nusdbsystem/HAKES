@@ -31,10 +31,10 @@ class WorkerImpl : public Worker {
   WorkerImpl() = default;
   virtual ~WorkerImpl() {}
 
-  bool Initialize(std::string collection_name, hakes::IOReader* ff, hakes::IOReader* rf, hakes::IOReader* uf,
+  bool Initialize(const std::string &collection_name, hakes::IOReader* ff, hakes::IOReader* rf, hakes::IOReader* uf,
                   bool keep_pa, int cluster_size, int server_id) override;
 
-  bool IsInitialized(std::string collection_name) override;
+  bool IsInitialized(const std::string &collection_name) override;
 
   bool AddWithIds(const char* req, size_t req_len, char* resp,
                   size_t resp_len) override;

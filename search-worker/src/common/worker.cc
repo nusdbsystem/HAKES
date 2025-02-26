@@ -214,7 +214,7 @@ std::string encode_hex_floats(const float* vecs, size_t count) {
 
 namespace search_worker {
 
-bool WorkerImpl::Initialize(std::string collection_name, hakes::IOReader* ff, hakes::IOReader* rf,
+bool WorkerImpl::Initialize(const std::string &collection_name, hakes::IOReader* ff, hakes::IOReader* rf,
                             hakes::IOReader* uf, bool keep_pa, int cluster_size,
                             int server_id) {
   main_indexes[collection_name] = std::make_unique<faiss::HakesIndex>();
@@ -227,7 +227,7 @@ bool WorkerImpl::Initialize(std::string collection_name, hakes::IOReader* ff, ha
   return true;
 }
 
-bool WorkerImpl::IsInitialized(std::string collection_name) {
+bool WorkerImpl::IsInitialized(const std::string &collection_name) {
   return main_indexes.find(collection_name) != main_indexes.end();
 }
 

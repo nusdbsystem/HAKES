@@ -52,7 +52,7 @@ bool WorkerU::Initialize(const char *index_data, size_t index_len, int cluster_s
   return true;
 }
 
-bool WorkerU::IsInitialized(std::string collection_name) { return initialized_; }
+bool WorkerU::IsInitialized(const std::string &collection_name) { return initialized_; }
 
 bool WorkerU::AddWithIds(const char* req, size_t req_len, char* resp,
                          size_t resp_len) {

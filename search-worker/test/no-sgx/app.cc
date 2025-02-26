@@ -95,7 +95,7 @@ int main(int argc, char* argv[]) {
   printf("content_len: %ld\n", content_len);
 
   auto r = hakes::StringIOReader(content.get(), content_len);
-  bool status = worker.Initialize(&r, nullptr, nullptr, false, 1, 0);
+  bool status = worker.Initialize("main", &r, nullptr, nullptr, false, 1, 0);
   if (!status) {
     printf("Failed to initialize\n");
     exit(1);

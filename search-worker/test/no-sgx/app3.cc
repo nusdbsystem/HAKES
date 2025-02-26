@@ -98,7 +98,7 @@ int main(int argc, char* argv[]) {
 
   {
     auto r = hakes::StringIOReader(content.get(), content_len);
-    bool status = worker0.Initialize(&r, nullptr, nullptr, false, 3, 0);
+    bool status = worker0.Initialize("main", &r, nullptr, nullptr, false, 3, 0);
     if (!status) {
       printf("Failed to initialize\n");
       exit(1);
@@ -106,7 +106,7 @@ int main(int argc, char* argv[]) {
   }
   {
     auto r = hakes::StringIOReader(content.get(), content_len);
-    bool status = worker1.Initialize(&r, nullptr, nullptr, false, 3, 1);
+    bool status = worker1.Initialize("main", &r, nullptr, nullptr, false, 3, 1);
     if (!status) {
       printf("Failed to initialize\n");
       exit(1);
@@ -114,7 +114,7 @@ int main(int argc, char* argv[]) {
   }
   {
     auto r = hakes::StringIOReader(content.get(), content_len);
-    bool status = worker2.Initialize(&r, nullptr, nullptr, false, 3, 2);
+    bool status = worker2.Initialize("main", &r, nullptr, nullptr, false, 3, 2);
     if (!status) {
       printf("Failed to initialize\n");
       exit(1);

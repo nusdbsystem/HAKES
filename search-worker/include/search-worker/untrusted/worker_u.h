@@ -39,9 +39,9 @@ class WorkerU : public Worker {
   WorkerU& operator=(WorkerU&&) = delete;
 
   // bool Initilize() override;
-  bool Initialize(std::string collection_name, const char* index_data, size_t index_len, int cluster_size, int server_id) override;
+  bool Initialize(const std::string &collection_name, const char* index_data, size_t index_len, int cluster_size, int server_id) override;
 
-  bool IsInitialized(std::string collection_name) override;
+  bool IsInitialized(const std::string &collection_name) override;
 
   bool AddWithIds(const char* req, size_t req_len, char* resp,
                   size_t resp_len) override;
