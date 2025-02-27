@@ -22,7 +22,7 @@ App_Link_Flags = -lrt -pthread -lm -lcrypto -lssl -fopenmp -ldl -L$(MKL_LIBRARY_
 
 .PHONY: all clean build_dir
 
-all: app_no_sgx search_server_no_sgx app3_no_sgx index_test
+all: app_no_sgx search_server_no_sgx app3_no_sgx index_test worker_test
 
 build_dir:
 	@echo "Creating build directory"
@@ -135,6 +135,9 @@ app3_no_sgx: test/no-sgx/app3.cc libworker.a
 	$(CXX) ${App_Cpp_Flags} $< -L. -l:libworker.a -o test/no-sgx/$@ ${COMMON_LINK_FLAGS} $(App_Link_Flags)
 
 index_test: test/no-sgx/index_test.cpp libworker.a
+	$(CXX) ${App_Cpp_Flags} $< -L. -l:libworker.a -o test/no-sgx/$@ ${COMMON_LINK_FLAGS} $(App_Link_Flags)
+
+worker_test: test/no-sgx/worker_test.cpp libworker.a
 	$(CXX) ${App_Cpp_Flags} $< -L. -l:libworker.a -o test/no-sgx/$@ ${COMMON_LINK_FLAGS} $(App_Link_Flags)
 
 ## Build search server ##
