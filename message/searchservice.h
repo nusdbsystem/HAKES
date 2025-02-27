@@ -29,6 +29,30 @@ std::unique_ptr<float[]> decode_hex_floats(const std::string& vecs_str, size_t* 
 std::string encode_hex_int64s(const int64_t* vecs, size_t count);
 std::unique_ptr<int64_t[]> decode_hex_int64s(const std::string& vecs_str, size_t* count);
 
+struct SearchWorkerLoadRequest {
+  int d;
+  std::string collection_name;
+  std::string user_id;
+  std::string ks_addr;
+  uint16_t ks_port = 0;
+};
+
+std::string encode_search_worker_load_request(const SearchWorkerLoadRequest& request);
+
+bool decode_search_worker_load_request(const std::string& request_str, SearchWorkerLoadRequest* request);
+
+struct SearchWorkerLoadResponse {
+  bool status;
+  std::string msg;
+  std::string aux;
+};
+
+std::string encode_search_worker_load_response(const SearchWorkerLoadResponse& response);
+
+bool decode_search_worker_load_response(const std::string& response_str, SearchWorkerLoadResponse* response);
+
+
+
 struct SearchWorkerAddRequest {
   int d;
   std::string collection_name;

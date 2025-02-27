@@ -97,24 +97,21 @@ int main(int argc, char* argv[]) {
   printf("content_len: %ld\n", content_len);
 
   {
-    auto r = hakes::StringIOReader(content.get(), content_len);
-    bool status = worker0.Initialize("main", &r, nullptr, nullptr, false, 3, 0);
+    bool status = worker0.Initialize(false, 3, 0, cfg.index_path);
     if (!status) {
       printf("Failed to initialize\n");
       exit(1);
     }
   }
   {
-    auto r = hakes::StringIOReader(content.get(), content_len);
-    bool status = worker1.Initialize("main", &r, nullptr, nullptr, false, 3, 1);
+    bool status = worker1.Initialize(false, 3, 1, cfg.index_path);
     if (!status) {
       printf("Failed to initialize\n");
       exit(1);
     }
   }
   {
-    auto r = hakes::StringIOReader(content.get(), content_len);
-    bool status = worker2.Initialize("main", &r, nullptr, nullptr, false, 3, 2);
+    bool status = worker2.Initialize(false, 3, 2, cfg.index_path);
     if (!status) {
       printf("Failed to initialize\n");
       exit(1);

@@ -57,7 +57,7 @@ int main(int argc, char* argv[]) {
   }
 
   search_worker::WorkerU* worker = new search_worker::WorkerU(enclave_file);
-  worker->Initialize("main", content.get(), content_len, cluster_size, server_id);
+  worker->Initialize(content.get(), content_len, cluster_size, server_id);
 
   hakes::Service s{std::unique_ptr<hakes::ServiceWorker>(
       new search_worker::SearchWorker(std::unique_ptr<search_worker::Worker>(worker)))};

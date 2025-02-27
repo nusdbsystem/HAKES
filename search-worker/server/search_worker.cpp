@@ -31,7 +31,7 @@ bool SearchWorker::Initialize() {
     return true;
   }
 
-  if (!worker_->IsInitialized("main")) {
+  if (!worker_->IsInitialized()) {
     return false;
   }
 
@@ -58,6 +58,11 @@ bool SearchWorker::Handle(const std::string& url, const std::string& input,
     return success;
   } else if (url == "/rerank") {
     auto success = worker_->Rerank(input.c_str(), input.size(), buf.get(),
+                                   1024 * 1024);
+    output->assign(&buf[0]);
+    return success;
+  } else if (url == "/load") {
+    auto success = worker_->LoadCollection(input.c_str(), input.size(), buf.get(),
                                    1024 * 1024);
     output->assign(&buf[0]);
     return success;

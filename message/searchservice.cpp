@@ -50,6 +50,49 @@ std::unique_ptr<int64_t[]> decode_hex_int64s(const std::string& vecs_str,
   return vecs;
 }
 
+std::string encode_search_worker_load_request(
+    const SearchWorkerLoadRequest& request) {
+  json::JSON ret;
+  ret["d"] = request.d;
+  ret["collection_name"] = request.collection_name;
+  if (!request.ks_addr.empty()) {
+    ret["user_id"] = request.user_id;
+    ret["ks_addr"] = request.ks_addr;
+    ret["ks_port"] = request.ks_port;
+  }
+  return ret.dump();
+}
+
+bool decode_search_worker_load_request(const std::string& request_str,
+                                      SearchWorkerLoadRequest* request) {
+  auto input = json::JSON::Load(request_str);
+  request->collection_name = input["collection_name"].ToString();
+  if (input.hasKey("ks_addr")) {
+    request->user_id = input["user_id"].ToString();
+    request->ks_addr = input["ks_addr"].ToString();
+    request->ks_port = input["ks_port"].ToInt();
+  }
+  return true;
+}
+
+std::string encode_search_worker_load_response(
+    const SearchWorkerLoadResponse& response) {
+  json::JSON ret;
+  ret["status"] = response.status;
+  ret["msg"] = response.msg;
+  ret["aux"] = response.aux;
+  return ret.dump();
+}
+
+bool decode_search_worker_load_response(const std::string& response_str,
+                                       SearchWorkerLoadResponse* response) {
+  auto input = json::JSON::Load(response_str);
+  response->status = input["status"].ToBool();
+  response->msg = input["msg"].ToString();
+  response->aux = input["aux"].ToString();
+  return true;
+}
+
 std::string encode_search_worker_add_request(
     const SearchWorkerAddRequest& request) {
   json::JSON ret;

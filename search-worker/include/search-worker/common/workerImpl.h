@@ -31,10 +31,14 @@ class WorkerImpl : public Worker {
   WorkerImpl() = default;
   virtual ~WorkerImpl() {}
 
-  bool Initialize(const std::string &collection_name, hakes::IOReader* ff, hakes::IOReader* rf, hakes::IOReader* uf,
-                  bool keep_pa, int cluster_size, int server_id) override;
+  bool Initialize(bool keep_pa, int cluster_size, int server_id, const std::string &path) override;
 
-  bool IsInitialized(const std::string &collection_name) override;
+  bool IsInitialized() override;
+
+  bool HasLoadedCollection(const std::string &collection_name) override;
+
+  bool LoadCollection(const char* req, size_t req_len, char* resp,
+                              size_t resp_len) override;
 
   bool AddWithIds(const char* req, size_t req_len, char* resp,
                   size_t resp_len) override;
@@ -50,7 +54,8 @@ class WorkerImpl : public Worker {
  private:
   int cluster_size_;
   int server_id_;
-  std::unordered_map<std::string, std::unique_ptr<faiss::HakesCollection>> main_indexes;
+  std::string base_path_;
+  std::unordered_map<std::string, std::unique_ptr<faiss::HakesCollection>> main_indexes_;
 };
 
 }  // namespace search_worker
