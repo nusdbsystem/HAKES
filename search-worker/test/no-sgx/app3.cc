@@ -126,11 +126,26 @@ int main(int argc, char* argv[]) {
       load_groundtruth(cfg.data_groundtruth_path.c_str(),
                        cfg.data_groundtruth_len, cfg.data_num_query);
 
+  // load the test collection
+  hakes::SearchWorkerLoadRequest load_req;
+  auto resp_load = std::unique_ptr<char[]>(new char[4096 * 4096]);
+  load_req.d = cfg.data_dim;
+  load_req.collection_name = "test";
+  std::string encoded_load_req =
+      hakes::encode_search_worker_load_request(load_req);
+  assert(worker0.LoadCollection(encoded_load_req.c_str(), encoded_load_req.size(),
+                                resp_load.get(), 4096 * 4096));
+  assert(worker1.LoadCollection(encoded_load_req.c_str(), encoded_load_req.size(),
+                                resp_load.get(), 4096 * 4096));
+  assert(worker2.LoadCollection(encoded_load_req.c_str(), encoded_load_req.size(),
+                                resp_load.get(), 4096 * 4096));
+
   // add
 
   for (int i = 0; i < 10; i++) {
     hakes::SearchWorkerAddRequest add_req;
     add_req.d = cfg.data_dim;
+    add_req.collection_name = "test";
     add_req.vecs =
         hakes::encode_hex_floats(data + i * cfg.data_dim, cfg.data_dim);
     int64_t ids[1] = {i};
@@ -174,6 +189,7 @@ int main(int argc, char* argv[]) {
   // search the first vector
   hakes::SearchWorkerSearchRequest search_req;
   search_req.d = cfg.data_dim;
+  search_req.collection_name = "test";
   search_req.vecs = hakes::encode_hex_floats(query, cfg.data_dim);
   search_req.k = cfg.search_k;
   search_req.nprobe = cfg.nprobe;
@@ -213,6 +229,7 @@ int main(int argc, char* argv[]) {
   hakes::SearchWorkerRerankRequest rerank_req;
   rerank_req.d = cfg.data_dim;
   rerank_req.k = cfg.search_k;
+  rerank_req.collection_name = "test";
   rerank_req.nprobe = cfg.nprobe;
   rerank_req.metric_type = 1;
   rerank_req.vecs = search_req.vecs;
