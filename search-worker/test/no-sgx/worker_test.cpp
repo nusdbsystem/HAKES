@@ -29,6 +29,9 @@
 #include "utils/data_loader.h"
 #include "utils/fileutil.h"
 
+#define TEST_COLLECTION "test"
+
+
 int main(int argc, char* argv[]) {
   if (argc < 2) {
     std::cout << "Usage: " << argv[0] << " INDEX_PATH" << std::endl;
@@ -45,48 +48,15 @@ int main(int argc, char* argv[]) {
   }
   std::cout << "INDEX_PATH: " << index_path << std::endl;
 
-  std::string findex_path =
-      std::filesystem::absolute(index_path).string() + "/findex.bin";
-  std::string rindex_path =
-      std::filesystem::absolute(index_path).string() + "/rindex.bin";
-  std::string uindex_path =
-      std::filesystem::absolute(index_path).string() + "/uindex.bin";
-
-  // check if the index files exist
-  std::unique_ptr<hakes::StringIOReader> fr = nullptr;
-  std::unique_ptr<hakes::StringIOReader> rr = nullptr;
-  std::unique_ptr<hakes::StringIOReader> ur = nullptr;
-
-  if (!std::filesystem::exists(findex_path)) {
-    std::cout << "findex.bin does not exist" << std::endl;
-    exit(1);
-  }
-
-
   std::unique_ptr<char[]> fcontent;
   std::unique_ptr<char[]> rcontent;
   std::unique_ptr<char[]> ucontent;
 
-  size_t content_len = 0;
-  fcontent = hakes::ReadFileToCharArray(findex_path.c_str(), &content_len);
-  fr.reset(new hakes::StringIOReader(fcontent.get(), content_len));
-
-  if (std::filesystem::exists(rindex_path)) {
-    rcontent = hakes::ReadFileToCharArray(rindex_path.c_str(), &content_len);
-    rr.reset(new hakes::StringIOReader(rcontent.get(), content_len));
-  }
-
-  if (std::filesystem::exists(uindex_path)) {
-    ucontent = hakes::ReadFileToCharArray(uindex_path.c_str(), &content_len);
-    ur.reset(new hakes::StringIOReader(ucontent.get(), content_len));
-  }
-
-  bool status = worker.Initialize(fr.get(), rr.get(), ur.get(), false, 1, 0);
+  bool status = worker.Initialize(false, 1, 0, std::filesystem::absolute(index_path).string());
   if (!status) {
     printf("Failed to initialize\n");
     exit(1);
   }
-  std::cout << "Index loaded" << std::endl;
 
   // generate vectors
   int n = 30;
@@ -106,13 +76,24 @@ int main(int argc, char* argv[]) {
     xq[d * i] += i / 1000.;
   }
   std::cout << "\nData generated ..." << std::endl;
-  // add
 
+  hakes::SearchWorkerLoadRequest load_req;
+  auto resp_load = std::unique_ptr<char[]>(new char[4096 * 4096]);
+  load_req.d = d;
+  load_req.collection_name = TEST_COLLECTION;
+  std::string encoded_load_req =
+      hakes::encode_search_worker_load_request(load_req);
+  assert(worker.LoadCollection(encoded_load_req.c_str(), encoded_load_req.size(),
+                               resp_load.get(), 4096 * 4096));
+  std::cout << "Index loaded" << std::endl;
+
+  // add vectors.
   for (int i = 0; i < n; i++) {
     hakes::SearchWorkerAddRequest add_req;
     add_req.d = d;
     add_req.vecs =
         hakes::encode_hex_floats(xb + i * d, d);
+    add_req.collection_name = TEST_COLLECTION;
     int64_t ids[1] = {i};
     add_req.ids = hakes::encode_hex_int64s(ids, 1);
 
@@ -137,6 +118,7 @@ int main(int argc, char* argv[]) {
   search_req.nprobe = nprobe;
   search_req.k_factor = k_factor;
   search_req.metric_type = 1;
+  search_req.collection_name = TEST_COLLECTION;
 
   std::string encoded_search_req =
       hakes::encode_search_worker_search_request(search_req);
@@ -149,6 +131,7 @@ int main(int argc, char* argv[]) {
     printf("Output: %s\n", resp.get());
   } else {
     printf("Failed to search\n");
+    exit(1);
   }
 
   // decode the search result
@@ -174,6 +157,7 @@ int main(int argc, char* argv[]) {
   rerank_req.metric_type = 1;
   rerank_req.vecs = search_req.vecs;
   rerank_req.input_ids = search_resp.ids;
+  rerank_req.collection_name = TEST_COLLECTION;
 
   std::string encoded_rerank_req =
       hakes::encode_search_worker_rerank_request(rerank_req);

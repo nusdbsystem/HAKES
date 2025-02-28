@@ -1,8 +1,9 @@
 # %%
-%load_ext autoreload
-%autoreload 2
+# %load_ext autoreload
+# %autoreload 2
 # %%
 import sys
+import os
 sys.path.append(os.path.abspath("../../python"))
 print(sys.path)
 # %%
