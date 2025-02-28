@@ -43,6 +43,10 @@ class WorkerU : public Worker {
 
   bool IsInitialized() override;
 
+  bool Load(const std::string &collection_name) override;
+
+  bool Save(const std::string &collection_name) override;
+
   bool AddWithIds(const char* req, size_t req_len, char* resp,
                   size_t resp_len) override;
 
