@@ -61,6 +61,11 @@ bool SearchWorker::Handle(const std::string& url, const std::string& input,
                                    1024 * 1024);
     output->assign(&buf[0]);
     return success;
+  } else if (url == "/load") {
+    auto success = worker_->LoadCollection(input.c_str(), input.size(), buf.get(),
+                                   1024 * 1024);
+    output->assign(&buf[0]);
+    return success;
   }
 
   return false;

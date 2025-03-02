@@ -14,108 +14,86 @@
  * limitations under the License.
  */
 
+#include "search-worker/common/worker.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include <filesystem>
 #include <iostream>
 #include <memory>
 
 #include "message/searchservice.h"
-#include "search-worker/common/worker.h"
 #include "search-worker/common/workerImpl.h"
 #include "utils/data_loader.h"
 #include "utils/fileutil.h"
 
-struct Config {
-  size_t data_n = 1183514;
-  size_t data_num_query = 1000;
-  size_t data_dim = 200;
-  size_t search_k = 10;
-  size_t data_groundtruth_len = 100;
-  std::string data_train_path;
-  std::string data_query_path;
-  std::string data_groundtruth_path;
-  // index params
-  int nprobe = 1024;
-  int k_factor = 50;
-  std::string index_path;
-};
+#define TEST_COLLECTION "test"
 
-Config parse_config(int argc, char** argv) {
-  Config cfg;
-  if (argc < 12) {
-    std::cout
-        << "Usage: " << argv[0]
-        << " DATA_N DATA_NUM_QUERY DATA_DIM SEARCH_K DATA_GROUNDTRUTH_LEN "
-           "DATA_TRAIN_PATH DATA_QUERY_PATH DATA_GROUNDTRUTH_PATH NPROBE "
-           "K_FACTOR INDEX_PATH"
-        << std::endl;
+
+int main(int argc, char* argv[]) {
+  if (argc < 2) {
+    std::cout << "Usage: " << argv[0] << " INDEX_PATH" << std::endl;
     exit(1);
   }
 
-  cfg.data_n = std::stoul(argv[1]);
-  cfg.data_num_query = std::stoul(argv[2]);
-  cfg.data_dim = std::stoul(argv[3]);
-  cfg.search_k = std::stoul(argv[4]);
-  cfg.data_groundtruth_len = std::stoul(argv[5]);
-  cfg.data_train_path = argv[6];
-  cfg.data_query_path = argv[7];
-  cfg.data_groundtruth_path = argv[8];
-  cfg.nprobe = std::stoi(argv[9]);
-  cfg.k_factor = std::stoi(argv[10]);
-  cfg.index_path = argv[11];
-
-  std::cout << "DATA_N: " << cfg.data_n << std::endl;
-  std::cout << "DATA_NUM_QUERY: " << cfg.data_num_query << std::endl;
-  std::cout << "DATA_DIM: " << cfg.data_dim << std::endl;
-  std::cout << "SEARCH_K: " << cfg.search_k << std::endl;
-  std::cout << "DATA_GROUNDTRUTH_LEN: " << cfg.data_groundtruth_len
-            << std::endl;
-  std::cout << "DATA_TRAIN_PATH: " << cfg.data_train_path << std::endl;
-  std::cout << "DATA_QUERY_PATH: " << cfg.data_query_path << std::endl;
-  std::cout << "DATA_GROUNDTRUTH_PATH: " << cfg.data_groundtruth_path
-            << std::endl;
-  std::cout << "NPROBE: " << cfg.nprobe << std::endl;
-  std::cout << "K_FACTOR: " << cfg.k_factor << std::endl;
-  std::cout << "INDEX_PATH: " << cfg.index_path << std::endl;
-  return cfg;
-}
-
-int main(int argc, char* argv[]) {
-  // Config cfg;
-  Config cfg = parse_config(argc, argv);
-
   search_worker::WorkerImpl worker{};
 
-  // load index file
-  size_t content_len = 0;
-  auto content =
-      hakes::ReadFileToCharArray(cfg.index_path.c_str(), &content_len);
-  printf("content_len: %ld\n", content_len);
+  std::string index_path = argv[1];
+  // check if the index path is a existing directory
+  if (!std::filesystem::exists(index_path)) {
+    std::cout << "INDEX_PATH does not exist" << std::endl;
+    exit(1);
+  }
+  std::cout << "INDEX_PATH: " << index_path << std::endl;
 
-  auto r = hakes::StringIOReader(content.get(), content_len);
-  bool status = worker.Initialize(false, 1, 0, cfg.index_path);
+  std::unique_ptr<char[]> fcontent;
+  std::unique_ptr<char[]> rcontent;
+  std::unique_ptr<char[]> ucontent;
+
+  bool status = worker.Initialize(false, 1, 0, std::filesystem::absolute(index_path).string());
   if (!status) {
     printf("Failed to initialize\n");
     exit(1);
   }
-  // load data files
-  float* data =
-      load_data(cfg.data_train_path.c_str(), cfg.data_dim, cfg.data_n);
-  float* query =
-      load_data(cfg.data_query_path.c_str(), cfg.data_dim, cfg.data_num_query);
-  int* groundtruth =
-      load_groundtruth(cfg.data_groundtruth_path.c_str(),
-                       cfg.data_groundtruth_len, cfg.data_num_query);
 
-  // add
+  // generate vectors
+  int n = 30;
+  int d = 768;
+  int nq = 10;
+  int search_k = 10;
+  int nprobe = 100;
+  int k_factor = 2;
+  float* xb = new float[d * n];
+  float* xq = new float[d * nq];
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < d; j++) xb[d * i + j] = drand48();
+    xb[d * i] += i / 1000.;
+  }
+  for (int i = 0; i < nq; i++) {
+    for (int j = 0; j < d; j++) xq[d * i + j] = drand48();
+    xq[d * i] += i / 1000.;
+  }
+  std::cout << "\nData generated ..." << std::endl;
 
-  for (int i = 0; i < 10; i++) {
+  hakes::SearchWorkerLoadRequest load_req;
+  auto resp_load = std::unique_ptr<char[]>(new char[4096 * 4096]);
+  load_req.d = d;
+  load_req.collection_name = TEST_COLLECTION;
+  std::string encoded_load_req =
+      hakes::encode_search_worker_load_request(load_req);
+  assert(worker.LoadCollection(encoded_load_req.c_str(), encoded_load_req.size(),
+                               resp_load.get(), 4096 * 4096));
+  std::cout << "Index loaded" << std::endl;
+
+  // add vectors.
+  for (int i = 0; i < n; i++) {
     hakes::SearchWorkerAddRequest add_req;
-    add_req.d = cfg.data_dim;
+    add_req.d = d;
     add_req.vecs =
-        hakes::encode_hex_floats(data + i * cfg.data_dim, cfg.data_dim);
+        hakes::encode_hex_floats(xb + i * d, d);
+    add_req.collection_name = TEST_COLLECTION;
     int64_t ids[1] = {i};
     add_req.ids = hakes::encode_hex_int64s(ids, 1);
 
@@ -134,12 +112,13 @@ int main(int argc, char* argv[]) {
 
   // search the first vector
   hakes::SearchWorkerSearchRequest search_req;
-  search_req.d = cfg.data_dim;
-  search_req.vecs = hakes::encode_hex_floats(query, cfg.data_dim);
-  search_req.k = cfg.search_k;
-  search_req.nprobe = cfg.nprobe;
-  search_req.k_factor = cfg.k_factor;
+  search_req.d = d;
+  search_req.vecs = hakes::encode_hex_floats(xb, d);
+  search_req.k = search_k;
+  search_req.nprobe = nprobe;
+  search_req.k_factor = k_factor;
   search_req.metric_type = 1;
+  search_req.collection_name = TEST_COLLECTION;
 
   std::string encoded_search_req =
       hakes::encode_search_worker_search_request(search_req);
@@ -152,6 +131,7 @@ int main(int argc, char* argv[]) {
     printf("Output: %s\n", resp.get());
   } else {
     printf("Failed to search\n");
+    exit(1);
   }
 
   // decode the search result
@@ -171,12 +151,13 @@ int main(int argc, char* argv[]) {
   }
   // rerank
   hakes::SearchWorkerRerankRequest rerank_req;
-  rerank_req.d = cfg.data_dim;
-  rerank_req.k = cfg.search_k;
-  rerank_req.nprobe = cfg.nprobe;
+  rerank_req.d = d;
+  rerank_req.k = search_k;
+  rerank_req.nprobe = nprobe;
   rerank_req.metric_type = 1;
   rerank_req.vecs = search_req.vecs;
   rerank_req.input_ids = search_resp.ids;
+  rerank_req.collection_name = TEST_COLLECTION;
 
   std::string encoded_rerank_req =
       hakes::encode_search_worker_rerank_request(rerank_req);
@@ -212,9 +193,7 @@ int main(int argc, char* argv[]) {
   }
 
   worker.Close();
-
-  delete[] data;
-  delete[] query;
-  delete[] groundtruth;
+  delete[] xb;
+  delete[] xq;
   return 0;
 }

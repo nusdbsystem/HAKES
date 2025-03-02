@@ -75,7 +75,7 @@ int main(int argc, char* argv[]) {
                                 : nullptr;
 
   search_worker::WorkerImpl* worker = new search_worker::WorkerImpl();
-  worker->Initialize(&ff, rf, uf, false, cluster_size, server_id);
+  worker->Initialize(false, cluster_size, server_id, path);
 
   hakes::Service s{
       std::unique_ptr<hakes::ServiceWorker>(new search_worker::SearchWorker(
