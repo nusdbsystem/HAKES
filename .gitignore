@@ -54,6 +54,7 @@ search_server_no_sgx
 hakes_server
 hakes_server_no_sgx
 index_test
+worker_test
 
 # test
 tmp
