@@ -11,6 +11,10 @@ from hakes.index.build import init_hakes_params, build_dataset, train_hakes_para
 
 # %%
 OUTPUT_DIR = "sample_data"
+COLLECTION_NAME = "test_collection"
+
+collection_dir = os.path.join(OUTPUT_DIR, COLLECTION_NAME)
+os.makedirs(collection_dir, exist_ok=True)
 
 # %%
 # fix all randomness
@@ -27,8 +31,7 @@ data = data / np.linalg.norm(data, axis=1, keepdims=True)
 index = init_hakes_params(data, 384, 100, "ip")
 
 # %%
-os.makedirs(OUTPUT_DIR, exist_ok=True)
-index.save_as_hakes_index(os.path.join(OUTPUT_DIR, "findex.bin"))
+index.save_as_hakes_index(os.path.join(collection_dir, "findex.bin"))
 
 # %%
 sample_ratio = 1
@@ -54,6 +57,6 @@ train_hakes_params(
 
 # %%
 recenter_ivf(index, data, sample_ratio)
-index.save_as_hakes_index(os.path.join(OUTPUT_DIR, "uindex.bin"))
+index.save_as_hakes_index(os.path.join(collection_dir, "uindex.bin"))
 
 # %%

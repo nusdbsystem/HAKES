@@ -1,13 +1,33 @@
 """
-  This file contains the message format for the client and server to communicate.
-  ref: HAKES/message
+This file contains the message format for the client and server to communicate.
+ref: HAKES/message
 """
 
 import numpy as np
 from typing import Dict
 
 
+def encode_search_worker_load_collection_request(
+    collection_name: str,
+    user_id: str = "",
+    ks_addr: str = "",
+    ks_port: int = -1,
+):
+    data = {
+        "collection_name": collection_name,
+        "user_id": user_id,
+        "ks_addr": ks_addr,
+        "ks_port": ks_port,
+    }
+    return data
+
+
+def decode_search_worker_load_collection_response(resp: Dict) -> Dict:
+    return resp
+
+
 def encode_search_worker_add_request(
+    collection_name: str,
     vecs: np.ndarray,
     ids: np.ndarray,
     user_id: str = "",
@@ -15,6 +35,7 @@ def encode_search_worker_add_request(
     ks_port: int = -1,
 ):
     data = {
+        "collection_name": collection_name,
         "d": vecs.shape[1],
         "vecs": np.ascontiguousarray(vecs, dtype="<f").tobytes().hex(),
         "ids": np.ascontiguousarray(ids, dtype="<q").tobytes().hex(),
@@ -30,6 +51,7 @@ def decode_search_worker_add_response(resp: Dict) -> Dict:
 
 
 def encode_search_worker_search_request(
+    collection_name: str,
     k: int,
     vecs: np.ndarray,
     nprobe: int,
@@ -43,6 +65,7 @@ def encode_search_worker_search_request(
     d = vecs.shape[1]
     vecs = vecs.flatten()
     data = {
+        "collection_name": collection_name,
         "d": d,
         "k": k,
         "vecs": np.ascontiguousarray(vecs, dtype="<f").tobytes().hex(),
@@ -75,6 +98,7 @@ def decode_search_worker_search_response(
 
 
 def encode_search_worker_rerank_request(
+    collection_name: str,
     k: int,
     vecs: np.ndarray,
     input_ids: np.ndarray,
@@ -92,6 +116,7 @@ def encode_search_worker_rerank_request(
     d = vecs.shape[1]
     vecs = vecs.flatten()
     data = {
+        "collection_name": collection_name,
         "d": d,
         "k": k,
         "vecs": np.ascontiguousarray(vecs, dtype="<f").tobytes().hex(),

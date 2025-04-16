@@ -9,6 +9,7 @@ docker run --name search-worker-test -p 2053:8080 -v $PWD/../gen-index/sample_da
 %load_ext autoreload
 %autoreload 2
 # %%
+import os
 import sys
 sys.path.append(os.path.abspath("../../client/py"))
 print(sys.path)
@@ -17,7 +18,7 @@ import numpy as np
 import random
 
 # %%
-OUTPUT_DIR = "../gen-index/sample_data"
+COLLECTION_NAME = "test_collection"
 
 # %%
 # fix all randomness
@@ -38,11 +39,15 @@ from hakesclient import Client, ClientConfig
 # %%
 config = ClientConfig(search_worker_addrs=["http://localhost:2053"])
 client = Client(config)
-# %%
-for i in range(len(database_vector)):
-    client.add(database_vector[i:i+1], [i])
 
 # %%
-client.search(query_vector[0:1], 10, 20, 5, "IP")
+client.load_collection(COLLECTION_NAME)
+
+# %%
+for i in range(len(database_vector)):
+    client.add(COLLECTION_NAME, database_vector[i:i+1], [i])
+
+# %%
+client.search(COLLECTION_NAME, query_vector[0:1], 10, 20, 5, "IP")
 
 # %%
