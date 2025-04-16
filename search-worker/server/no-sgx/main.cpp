@@ -54,25 +54,9 @@ int main(int argc, char* argv[]) {
 
   // check directory exists
   if (!std::filesystem::exists(path)) {
-    fprintf(stderr, "Data path does not exist\n");
+    fprintf(stderr, "Data path does not exist: %s\n", path.c_str());
     exit(1);
   }
-  std::string findex_path = path + "/" + FINDEX_NAME;
-  std::string rindex_path = path + "/" + RINDEX_NAME;
-  std::string uindex_path = path + "/" + UINDEX_NAME;
-  // check the existence of the findex
-  if (!hakes::IsFileExist(findex_path)) {
-    fprintf(stderr, "Findex does not exist\n");
-    exit(1);
-  }
-  hakes::FileIOReader ff = hakes::FileIOReader(findex_path.c_str());
-
-  hakes::FileIOReader* rf = (hakes::IsFileExist(rindex_path))
-                                ? new hakes::FileIOReader(rindex_path.c_str())
-                                : nullptr;
-  hakes::FileIOReader* uf = (hakes::IsFileExist(uindex_path))
-                                ? new hakes::FileIOReader(uindex_path.c_str())
-                                : nullptr;
 
   search_worker::WorkerImpl* worker = new search_worker::WorkerImpl();
   worker->Initialize(false, cluster_size, server_id, path);
