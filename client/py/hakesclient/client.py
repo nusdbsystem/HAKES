@@ -29,41 +29,50 @@ class Client:
             )
 
     def search_work_load_collection(self, addr: str, collection_name: str):
-        if len(addr) == 0:
-            raise ValueError("search worker address is empty")
-        if not addr.startswith("http"):
-            addr = "http://" + addr
+        addr = self._validate_addr(addr)
         data = encode_search_worker_load_collection_request(collection_name)
+
         try:
             response = requests.post(addr + "/load", json=data)
         except Exception as e:
             logging.warning(f"search worker load collection failed on {addr}: {e}")
             return None
+
         if response.status_code != 200:
             logging.warning(
                 f"Failed to call search worker, status code: {response.status_code} {response.text}"
             )
             return None
+
         return decode_search_worker_load_collection_response(json.loads(response.text))
+
+    def _validate_addr(self, addr: str):
+        if not addr:
+            raise ValueError("search worker address is empty")
+
+        if not addr.startswith("http"):
+            addr = "http://" + addr
+
+        return addr
 
     def search_worker_add(
         self, addr: str, collection_name: str, vecs: np.ndarray, ids: np.ndarray
     ):
-        if len(addr) == 0:
-            raise ValueError("search worker address is empty")
-        if not addr.startswith("http"):
-            addr = "http://" + addr
+        addr = self._validate_addr(addr)
         data = encode_search_worker_add_request(collection_name, vecs, ids)
+
         try:
             response = requests.post(addr + "/add", json=data)
         except Exception as e:
             logging.warning(f"search worker add failed on {addr}: {e}")
             return None
+
         if response.status_code != 200:
             logging.warning(
                 f"Failed to call search worker, status code: {response.status_code} {response.text}"
             )
             return None
+
         return decode_search_worker_add_response(json.loads(response.text))
 
     def search_worker_search(
@@ -76,10 +85,7 @@ class Client:
         k_factor: int,
         metric_type: str,
     ):
-        if len(addr) == 0:
-            raise ValueError("search worker address is empty")
-        if not addr.startswith("http"):
-            addr = "http://" + addr
+        addr = self._validate_addr(addr)
         data = encode_search_worker_search_request(
             collection_name,
             k,
@@ -88,16 +94,19 @@ class Client:
             k_factor,
             metric_type,
         )
+
         try:
             response = requests.post(addr + "/search", json=data)
         except Exception as e:
             logging.warning(f"search worker search failed on {addr}: {e}")
             return None
+
         if response.status_code != 200:
             logging.warning(
                 f"Failed to call search worker, status code: {response.status_code} {response.text}"
             )
             return None
+
         return decode_search_worker_search_response(
             json.loads(response.text), k * k_factor, False
         )
@@ -112,10 +121,7 @@ class Client:
         nprobe: int,
         metric_type: str,
     ):
-        if len(addr) == 0:
-            raise ValueError("search worker address is empty")
-        if not addr.startswith("http"):
-            addr = "http://" + addr
+        addr = self._validate_addr(addr)
         data = encode_search_worker_rerank_request(
             collection_name,
             k,
@@ -124,16 +130,19 @@ class Client:
             nprobe,
             metric_type,
         )
+
         try:
             response = requests.post(addr + "/rerank", json=data)
         except Exception as e:
             logging.warning(f"search worker rerank failed on {addr}: {e}")
             return None
+
         if response.status_code != 200:
             logging.warning(
                 f"Failed to call search worker, status code: {response.status_code} {response.text}"
             )
             return None
+
         return decode_search_worker_rerank_response(json.loads(response.text), k)
 
     def load_collection(self, collection_name: str):
@@ -149,7 +158,6 @@ class Client:
             1. add to the target refine index server
             2. add to all base index servers
         """
-
         # build vector batch for each client
         search_worker_addr = self.cfg.search_worker_addrs[0]
 
