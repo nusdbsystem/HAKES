@@ -9,15 +9,13 @@ docker run --name search-worker-test -p 2053:8080 -v $PWD/../gen-index/sample_da
 %load_ext autoreload
 %autoreload 2
 # %%
+import os
 import sys
 sys.path.append(os.path.abspath("../../client/py"))
 print(sys.path)
 # %%
 import numpy as np
 import random
-
-# %%
-OUTPUT_DIR = "../gen-index/sample_data"
 
 # %%
 # fix all randomness
