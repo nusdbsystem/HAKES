@@ -18,6 +18,9 @@ import numpy as np
 import random
 
 # %%
+COLLECTION_NAME = "test_collection"
+
+# %%
 # fix all randomness
 seed = 0
 random.seed(seed)
@@ -36,11 +39,15 @@ from hakesclient import Client, ClientConfig
 # %%
 config = ClientConfig(search_worker_addrs=["http://localhost:2053"])
 client = Client(config)
-# %%
-for i in range(len(database_vector)):
-    client.add(database_vector[i:i+1], [i])
 
 # %%
-client.search(query_vector[0:1], 10, 20, 5, "IP")
+client.load_collection(COLLECTION_NAME)
+
+# %%
+for i in range(len(database_vector)):
+    client.add(COLLECTION_NAME, database_vector[i:i+1], [i])
+
+# %%
+client.search(COLLECTION_NAME, query_vector[0:1], 10, 20, 5, "IP")
 
 # %%
