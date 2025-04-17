@@ -20,26 +20,17 @@ App_Cpp_Flags += $(COMMON_INCLUDE_FLAGS)
 
 App_Link_Flags = -lrt -pthread -lm -lcrypto -lssl -fopenmp -ldl -L$(MKL_LIBRARY_PATH) -lmkl_rt
 
-.PHONY: all clean build_dir
+.PHONY: all clean
 
-all: build_dir app_no_sgx search_server_no_sgx app3_no_sgx index_test worker_test
-
-build_dir:
-	@echo "Creating build directory"
-	mkdir -p src/no-sgx/index-build
-	mkdir -p src/no-sgx/index-build/blas
-	mkdir -p src/no-sgx/index-build/ext
-	mkdir -p src/no-sgx/index-build/impl
-	mkdir -p src/no-sgx/index-build/invlists
-	mkdir -p src/no-sgx/index-build/utils
+all: app_no_sgx search_server_no_sgx app3_no_sgx index_test worker_test
 
 ## index srcs
-src/no-sgx/index-build/%.o: index/%.cpp build_dir
+src/no-sgx/index-build/%.o: index/%.cpp
 	@echo "GEN1 $< from $@"
 	$(CXX) ${App_Cpp_Flags} -c $< -o $@
 	@echo "CXX <= $<"
 
-src/no-sgx/index-build/blas/%.o: index/blas/%.c build_dir
+src/no-sgx/index-build/blas/%.o: index/blas/%.c
 	@echo "GEN1 $< from $@"
 	$(CXX) ${COMMON_FLAGS} -c $< -o $@ -I${PROJECT_ROOT_DIR}/index/blas
 	@echo "CXX <= $<"

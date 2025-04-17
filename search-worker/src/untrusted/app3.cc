@@ -213,7 +213,6 @@ int main(int argc, char* argv[]) {
   hakes::SearchWorkerRerankRequest rerank_req;
   rerank_req.d = cfg.data_dim;
   rerank_req.k = cfg.search_k;
-  rerank_req.nprobe = cfg.nprobe;
   rerank_req.metric_type = 1;
   rerank_req.vecs = search_req.vecs;
   rerank_req.input_ids = search_resp.ids;

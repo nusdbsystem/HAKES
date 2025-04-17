@@ -28,17 +28,20 @@ namespace search_worker {
 
 class WorkerImpl : public Worker {
  public:
-  WorkerImpl() = default;
-  virtual ~WorkerImpl() {}
+  WorkerImpl() { pthread_rwlock_init(&collection_mu_, nullptr); };
+  virtual ~WorkerImpl() { pthread_rwlock_destroy(&collection_mu_); }
 
-  bool Initialize(bool keep_pa, int cluster_size, int server_id, const std::string &path) override;
+  bool Initialize(bool keep_pa, int cluster_size, int server_id,
+                  const std::string& path) override;
 
   bool IsInitialized() override;
 
-  bool HasLoadedCollection(const std::string &collection_name) override;
+  bool HasLoadedCollection(const std::string& collection_name) override;
+
+  faiss::HakesCollection* GetCollection(const std::string& collection_name);
 
   bool LoadCollection(const char* req, size_t req_len, char* resp,
-                              size_t resp_len) override;
+                      size_t resp_len) override;
 
   bool AddWithIds(const char* req, size_t req_len, char* resp,
                   size_t resp_len) override;
@@ -49,13 +52,18 @@ class WorkerImpl : public Worker {
   bool Rerank(const char* req, size_t req_len, char* resp,
               size_t resp_len) override;
 
+  bool Delete(const char* req, size_t req_len, char* resp,
+              size_t resp_len) override;
+
   bool Close() override;
 
  private:
   int cluster_size_;
   int server_id_;
   std::string base_path_;
-  std::unordered_map<std::string, std::unique_ptr<faiss::HakesCollection>> main_indexes_;
+  mutable pthread_rwlock_t collection_mu_;
+  std::unordered_map<std::string, std::unique_ptr<faiss::HakesCollection>>
+      collections;
 };
 
 }  // namespace search_worker

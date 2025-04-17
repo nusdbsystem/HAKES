@@ -36,8 +36,9 @@ class HakesCollection {
   HakesCollection() = default;
   virtual ~HakesCollection() {}
 
-  virtual bool Initialize(hakes::IOReader* ff, hakes::IOReader* rf,
-                          hakes::IOReader* uf, bool keep_pa = false) = 0;
+  // mode = 0: load full, 1: load filter index, 2: load refine index
+  virtual bool Initialize(const std::string& path, int mode = 0,
+                          bool keep_pa = false) = 0;
 
   virtual void UpdateIndex(const HakesCollection* other) = 0;
 
@@ -50,6 +51,9 @@ class HakesCollection {
   virtual bool AddBase(int n, int d, const float* vecs,
                        const faiss::idx_t* ids) = 0;
 
+  virtual bool AddRefine(int n, int d, const float* vecs,
+                         const faiss::idx_t* ids) = 0;
+
   virtual bool Search(int n, int d, const float* query,
                       const HakesSearchParams& params,
                       std::unique_ptr<float[]>* distances,
@@ -61,11 +65,13 @@ class HakesCollection {
                       std::unique_ptr<float[]>* distances,
                       std::unique_ptr<faiss::idx_t[]>* labels) = 0;
 
-  virtual bool Checkpoint(hakes::IOWriter* ff, hakes::IOWriter* rf) const = 0;
+  virtual bool Checkpoint(const std::string& checkpoint_path) const = 0;
 
-  virtual bool GetParams(hakes::IOWriter* pf) const = 0;
+  virtual std::string GetParams() const = 0;
 
-  virtual bool UpdateParams(hakes::IOReader* pf) = 0;
+  virtual bool UpdateParams(const std::string& params) = 0;
+
+  virtual bool DeleteWithIds(int n, const faiss::idx_t* ids) = 0;
 
   virtual std::string to_string() const = 0;
 };

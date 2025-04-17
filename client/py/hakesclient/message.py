@@ -84,9 +84,14 @@ def decode_search_worker_search_response(
 ) -> Dict:
     if "status" not in resp or not resp["status"]:
         return resp
-    print("parsing response")
+    # print("parsing response")
     ids = (
         np.frombuffer(bytes.fromhex(resp["ids"]), dtype=np.int64)
+        .reshape(-1, k)
+        .tolist()
+    )
+    scores =(
+        np.frombuffer(bytes.fromhex(resp["scores"]), dtype=np.float32)
         .reshape(-1, k)
         .tolist()
     )
@@ -94,6 +99,7 @@ def decode_search_worker_search_response(
         if filter_invalid:
             ids[i] = ids[i][ids[i] != -1]
     resp["ids"] = ids
+    resp["scores"] = scores
     return resp
 
 
@@ -102,7 +108,6 @@ def encode_search_worker_rerank_request(
     k: int,
     vecs: np.ndarray,
     input_ids: np.ndarray,
-    nprobe: int,
     metric_type: str,  # L2: 0, IP: 1
     user_id: str = "",
     ks_addr: str = "",
@@ -121,7 +126,6 @@ def encode_search_worker_rerank_request(
         "k": k,
         "vecs": np.ascontiguousarray(vecs, dtype="<f").tobytes().hex(),
         "input_ids": np.ascontiguousarray(input_ids, dtype="<q").tobytes().hex(),
-        "nprobe": nprobe,
         "metric_type": 0 if metric_type == "L2" else 1,
         "user_id": user_id,
         "ks_addr": ks_addr,
@@ -144,3 +148,14 @@ def decode_search_worker_rerank_response(resp: Dict, k: int) -> Dict:
         .tolist()
     )
     return resp
+
+def encode_search_worker_delete_request(collection_name: str, ids: np.ndarray):
+    data = {
+        "collection_name": collection_name,
+        "ids": np.ascontiguousarray(ids, dtype="<q").tobytes().hex(),
+    }
+    return data
+
+
+def decode_search_worker_delete_response(resp: Dict) -> Dict:
+    return {"status": resp["status"], "msg": resp["msg"]}

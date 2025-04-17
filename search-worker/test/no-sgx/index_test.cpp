@@ -169,19 +169,18 @@ int testHakesFlatIndex(Config cfg) {
   std::cout << "Search complete!" << std::endl;
 
   // save index
-  auto save_rindex_path = cfg.save_path + "/rindex.bin";
-  {
-    auto rf = hakes::FileIOWriter(save_rindex_path.c_str());
-    index->Checkpoint(nullptr, &rf);
+  if (!index->Checkpoint(cfg.save_path)) {
+    std::cerr << "Failed to save index!" << std::endl;
+    return 1;
   }
   std::cout << "Save complete!" << std::endl;
 
   // reload index
-  {
-    auto rf = hakes::FileIOReader(save_rindex_path.c_str());
-    std::unique_ptr<faiss::HakesFlatIndex> index2(
-        new faiss::HakesFlatIndex(d, metric));
-    index2->Initialize(nullptr, &rf, nullptr);
+  std::unique_ptr<faiss::HakesFlatIndex> index2(
+      new faiss::HakesFlatIndex(d, metric));
+  if (!index2->Initialize(cfg.save_path, 0, false)) {
+    std::cerr << "Failed to load index!" << std::endl;
+    return 1;
   }
   std::cout << "Load complete!" << std::endl;
 
@@ -194,43 +193,21 @@ int testHakesIndex(Config cfg) {
   int nq = cfg.data_num_query;
   int gt_len = cfg.data_groundtruth_len;
   int k = cfg.search_k;
-
-  auto save_findex_path = cfg.save_path + "/findex.bin";
-  auto save_rindex_path = cfg.save_path + "/rindex.bin";
-
   // search_worker::WorkerImpl worker{};
   std::unique_ptr<faiss::HakesIndex> index(new faiss::HakesIndex());
-  index->use_ivf_sq_ = true;
   index->use_refine_sq_ = false;
 
-  size_t content_len = 0;
-  auto content =
-      hakes::ReadFileToCharArray(cfg.index_path.c_str(), &content_len);
+  if (!index->Initialize(cfg.index_path, 0, false)) {
+    std::cerr << "Failed to initialize index!" << std::endl;
+    return 1;
+  }
 
-  printf("content_len: %ld\n", content_len);
-
-  hakes::StringIOReader reader(content.get(), content_len);
-  if (cfg.update_path.empty()) {
-    index->Initialize(&reader, nullptr, nullptr, false);
-  } else {
-    hakes::FileIOReader update_reader(cfg.update_path.c_str());
-    // a. directly update query index
-    index->Initialize(&reader, nullptr, &update_reader, false);
-    // // b. save query params and perform a query index update
-    // index->Initialize(&reader, nullptr, nullptr, false);
-    // faiss::HakesIndex update_index;
-    // update_index.Initialize(&update_reader, nullptr, nullptr, false);
-    // printf("update_index loaded\n");
-    // {
-    //   auto upw = hakes::FileIOWriter("./update_params.bin");
-    //   update_index.GetParams(&upw);
-    //   printf("update_index params saved\n");
-    // }
-    // {
-    //   auto upr = hakes::FileIOReader("./update_params.bin");
-    //   index->UpdateParams(&upr);
-    //   printf("update_index params loaded\n");
-    // }
+  if (!cfg.update_path.empty()) {
+    size_t content_len = 0;
+    auto content =
+        hakes::ReadFileToCharArray(cfg.update_path.c_str(), &content_len);
+    index->UpdateParams(
+        std::string(content.get(), content_len));  // update index
   }
 
   std::cout << "Index loaded" << std::endl;
@@ -381,10 +358,9 @@ int testHakesIndex(Config cfg) {
   std::cout << "Index: " << index->to_string() << std::endl;
 
   // save index
-  {
-    auto ff = hakes::FileIOWriter(save_findex_path.c_str());
-    auto rf = hakes::FileIOWriter(save_rindex_path.c_str());
-    index->Checkpoint(&ff, &rf);
+  if (!index->Checkpoint(cfg.save_path)) {
+    std::cerr << "Failed to save index!" << std::endl;
+    return 1;
   }
 
   {
@@ -444,16 +420,12 @@ int testHakesIndex(Config cfg) {
 
   // test reload
   faiss::HakesIndex index2;
-  {
-    auto ff = hakes::FileIOReader(save_findex_path.c_str());
-    auto rf = hakes::FileIOReader(save_rindex_path.c_str());
-    auto uf = hakes::FileIOReader(cfg.update_path.c_str());
-    index2.use_ivf_sq_ = true;
-    index2.use_refine_sq_ = false;
-    index2.Initialize(&ff, &rf, &uf, false);
-    std::cout << "Index2 loaded" << std::endl;
-    std::cout << index2.to_string() << std::endl;
+  if (!index2.Initialize(cfg.save_path, 0, false)) {
+    std::cerr << "Failed to load index!" << std::endl;
+    return 1;
   }
+  std::cout << "Index2 loaded" << std::endl;
+  std::cout << index2.to_string() << std::endl;
 
   {
     index2.base_index_->use_early_termination_ = true;

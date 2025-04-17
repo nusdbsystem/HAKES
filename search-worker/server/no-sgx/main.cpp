@@ -31,10 +31,6 @@
 #include "utils/fileutil.h"
 #include "uv.h"
 
-#define FINDEX_NAME "findex.bin"
-#define RINDEX_NAME "rindex.bin"
-#define UINDEX_NAME "uindex.bin"
-
 int main(int argc, char* argv[]) {
   // pick service selection
 

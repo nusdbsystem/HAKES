@@ -15,6 +15,8 @@ from .message import (
     encode_search_worker_rerank_request,
     encode_search_worker_search_request,
     encode_search_worker_load_collection_request,
+    encode_search_worker_delete_request,
+    decode_search_worker_delete_response,
 )
 
 
@@ -75,6 +77,26 @@ class Client:
 
         return decode_search_worker_add_response(json.loads(response.text))
 
+    def search_worker_delete(
+        self, addr: str, collection_name: str, ids: np.ndarray
+    ):
+        addr = self._validate_addr(addr)
+        data = encode_search_worker_delete_request(collection_name, ids)
+
+        try:
+            response = requests.post(addr + "/delete", json=data)
+        except Exception as e:
+            logging.warning(f"search worker delete failed on {addr}: {e}")
+            return None
+
+        if response.status_code != 200:
+            logging.warning(
+                f"Failed to call search worker, status code: {response.status_code} {response.text}"
+            )
+            return None
+
+        return decode_search_worker_delete_response(json.loads(response.text))
+
     def search_worker_search(
         self,
         addr: str,
@@ -118,7 +140,6 @@ class Client:
         query: np.ndarray,
         k: int,
         input_ids: np.ndarray,
-        nprobe: int,
         metric_type: str,
     ):
         addr = self._validate_addr(addr)
@@ -127,7 +148,6 @@ class Client:
             k,
             query,
             input_ids,
-            nprobe,
             metric_type,
         )
 
@@ -203,11 +223,17 @@ class Client:
             query,
             k,
             np.array(result["ids"]),
-            nprobe,
             metric_type,
         )
 
         return result
+
+    def delete(self, collection_name: str, ids: np.ndarray):
+        """
+        Delete vectors from the distributed HakesService V3
+        """
+        addr = self.cfg.search_worker_addrs[0]
+        return self.search_worker_delete(addr, collection_name, ids)
 
     def checkpoint(self):
         """

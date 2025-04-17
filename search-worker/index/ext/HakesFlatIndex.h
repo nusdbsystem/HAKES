@@ -19,6 +19,7 @@
 
 #include "search-worker/index/ext/HakesCollection.h"
 #include "search-worker/index/ext/IndexFlatL.h"
+#include "search-worker/index/ext/TagChecker.h"
 
 namespace faiss {
 
@@ -26,6 +27,7 @@ class HakesFlatIndex : public HakesCollection {
  public:
   HakesFlatIndex(int d, faiss::MetricType metric) {
     refine_index_.reset(new faiss::IndexFlatL(d, metric));
+    del_checker_.reset(new TagChecker<idx_t>());
   }
   ~HakesFlatIndex() = default;
 
@@ -36,8 +38,7 @@ class HakesFlatIndex : public HakesCollection {
   HakesFlatIndex(HakesFlatIndex&&) = delete;
   HakesFlatIndex& operator=(HakesFlatIndex&&) = delete;
 
-  // bool Initialize(const std::string& path);
-  bool Initialize(hakes::IOReader* ff, hakes::IOReader* rf, hakes::IOReader* uf,
+  bool Initialize(const std::string& path, int mode = 0,
                   bool keep_pa = false) override;
 
   void UpdateIndex(const HakesCollection* other) override { return; }
@@ -50,6 +51,12 @@ class HakesFlatIndex : public HakesCollection {
 
   bool AddBase(int n, int d, const float* vecs,
                const faiss::idx_t* ids) override {
+    // noop. We may add a quantized flat index later
+    return true;
+  }
+
+  bool AddRefine(int n, int d, const float* vecs,
+                 const faiss::idx_t* ids) override {
     return AddWithIds(n, d, vecs, ids, nullptr, nullptr, nullptr);
   }
 
@@ -66,15 +73,23 @@ class HakesFlatIndex : public HakesCollection {
     return false;
   }
 
-  bool Checkpoint(hakes::IOWriter* ff, hakes::IOWriter* rf) const override;
+  bool Checkpoint(const std::string& checkpoint_path) const override;
 
-  bool GetParams(hakes::IOWriter* pf) const override { return true; }
+  std::string GetParams() const override { return ""; }
 
-  bool UpdateParams(hakes::IOReader* pf) override { return true; }
+  bool UpdateParams(const std::string& path) override { return true; }
+
+  inline bool DeleteWithIds(int n, const idx_t* ids) override {
+    if (del_checker_) {
+      del_checker_->set(n, ids);
+    }
+    return true;
+  }
 
   std::string to_string() const override;
 
   std::unique_ptr<faiss::IndexFlatL> refine_index_;
+  std::unique_ptr<TagChecker<idx_t>> del_checker_;
 };
 
 }  // namespace faiss

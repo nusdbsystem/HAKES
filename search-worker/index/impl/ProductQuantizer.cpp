@@ -421,7 +421,7 @@ void ProductQuantizer::compute_codes(const float* x, uint8_t* codes, size_t n)
 
     if (dsub < 16) { // simple direct computation
 
-#pragma omp parallel for
+// #pragma omp parallel for
         for (int64_t i = 0; i < n; i++)
             compute_code(x + i * d, codes + i * code_size);
 

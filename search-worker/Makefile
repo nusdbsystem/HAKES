@@ -16,6 +16,13 @@ enclave_api:
 	$(MAKE) -ef sgx_t.mk enclave_api SGX_MODE=$(SGX_MODE) SGX_DEBUG=$(SGX_DEBUG) Enclave_Search_Dirs="$(Enclave_Search_Dirs)"
 
 no_sgx: 
+	@echo "Creating build directory"
+	mkdir -p src/no-sgx/index-build
+	mkdir -p src/no-sgx/index-build/blas
+	mkdir -p src/no-sgx/index-build/ext
+	mkdir -p src/no-sgx/index-build/impl
+	mkdir -p src/no-sgx/index-build/invlists
+	mkdir -p src/no-sgx/index-build/utils
 	$(MAKE) -ef no_sgx.mk all 
 
 sgx_u:

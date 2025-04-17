@@ -47,6 +47,9 @@ class Worker {
   virtual bool Rerank(const char* req, size_t req_len, char* resp,
                       size_t resp_len) = 0;
 
+  virtual bool Delete(const char* req, size_t req_len, char* resp,
+                      size_t resp_len) = 0;
+
   virtual bool Close() = 0;
 };
 

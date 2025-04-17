@@ -17,29 +17,32 @@
 #ifndef HAKES_MESSAGE_SEARCHSERVICE_H_
 #define HAKES_MESSAGE_SEARCHSERVICE_H_
 
-#include <string>
 #include <memory>
+#include <string>
 
 namespace hakes {
 
-
 std::string encode_hex_floats(const float* vecs, size_t count);
-std::unique_ptr<float[]> decode_hex_floats(const std::string& vecs_str, size_t* count);
+std::unique_ptr<float[]> decode_hex_floats(const std::string& vecs_str,
+                                           size_t* count);
 
 std::string encode_hex_int64s(const int64_t* vecs, size_t count);
-std::unique_ptr<int64_t[]> decode_hex_int64s(const std::string& vecs_str, size_t* count);
+std::unique_ptr<int64_t[]> decode_hex_int64s(const std::string& vecs_str,
+                                             size_t* count);
 
 struct SearchWorkerLoadRequest {
-  int d;
   std::string collection_name;
+  int mode = 0;
   std::string user_id;
   std::string ks_addr;
   uint16_t ks_port = 0;
 };
 
-std::string encode_search_worker_load_request(const SearchWorkerLoadRequest& request);
+std::string encode_search_worker_load_request(
+    const SearchWorkerLoadRequest& request);
 
-bool decode_search_worker_load_request(const std::string& request_str, SearchWorkerLoadRequest* request);
+bool decode_search_worker_load_request(const std::string& request_str,
+                                       SearchWorkerLoadRequest* request);
 
 struct SearchWorkerLoadResponse {
   bool status;
@@ -47,11 +50,11 @@ struct SearchWorkerLoadResponse {
   std::string aux;
 };
 
-std::string encode_search_worker_load_response(const SearchWorkerLoadResponse& response);
+std::string encode_search_worker_load_response(
+    const SearchWorkerLoadResponse& response);
 
-bool decode_search_worker_load_response(const std::string& response_str, SearchWorkerLoadResponse* response);
-
-
+bool decode_search_worker_load_response(const std::string& response_str,
+                                        SearchWorkerLoadResponse* response);
 
 struct SearchWorkerAddRequest {
   int d;
@@ -63,9 +66,11 @@ struct SearchWorkerAddRequest {
   uint16_t ks_port = 0;
 };
 
-std::string encode_search_worker_add_request(const SearchWorkerAddRequest& request);
+std::string encode_search_worker_add_request(
+    const SearchWorkerAddRequest& request);
 
-bool decode_search_worker_add_request(const std::string& request_str, SearchWorkerAddRequest* request);
+bool decode_search_worker_add_request(const std::string& request_str,
+                                      SearchWorkerAddRequest* request);
 
 struct SearchWorkerAddResponse {
   bool status;
@@ -73,9 +78,11 @@ struct SearchWorkerAddResponse {
   std::string aux;
 };
 
-std::string encode_search_worker_add_response(const SearchWorkerAddResponse& response);
+std::string encode_search_worker_add_response(
+    const SearchWorkerAddResponse& response);
 
-bool decode_search_worker_add_response(const std::string& response_str, SearchWorkerAddResponse* response);
+bool decode_search_worker_add_response(const std::string& response_str,
+                                       SearchWorkerAddResponse* response);
 
 struct SearchWorkerSearchRequest {
   int d;
@@ -90,26 +97,29 @@ struct SearchWorkerSearchRequest {
   uint16_t ks_port = 0;
 };
 
-std::string encode_search_worker_search_request(const SearchWorkerSearchRequest& request);
+std::string encode_search_worker_search_request(
+    const SearchWorkerSearchRequest& request);
 
-bool decode_search_worker_search_request(const std::string& request_str, SearchWorkerSearchRequest* request);
+bool decode_search_worker_search_request(const std::string& request_str,
+                                         SearchWorkerSearchRequest* request);
 
 struct SearchWorkerSearchResponse {
   bool status;
   std::string msg;
   std::string ids;
+  std::string scores;
   std::string aux;
 };
 
-std::string encode_search_worker_search_response(const SearchWorkerSearchResponse& response);
+std::string encode_search_worker_search_response(
+    const SearchWorkerSearchResponse& response);
 
-bool decode_search_worker_search_response(const std::string& response_str, SearchWorkerSearchResponse* response);
-
+bool decode_search_worker_search_response(const std::string& response_str,
+                                          SearchWorkerSearchResponse* response);
 
 struct SearchWorkerRerankRequest {
   int d;
   int k;
-  int nprobe;
   uint8_t metric_type;
   std::string collection_name;
   std::string vecs;
@@ -119,9 +129,11 @@ struct SearchWorkerRerankRequest {
   uint16_t ks_port = 0;
 };
 
-std::string encode_search_worker_rerank_request(const SearchWorkerRerankRequest& request);
+std::string encode_search_worker_rerank_request(
+    const SearchWorkerRerankRequest& request);
 
-bool decode_search_worker_rerank_request(const std::string& request_str, SearchWorkerRerankRequest* request);
+bool decode_search_worker_rerank_request(const std::string& request_str,
+                                         SearchWorkerRerankRequest* request);
 
 struct SearchWorkerRerankResponse {
   bool status;
@@ -131,9 +143,37 @@ struct SearchWorkerRerankResponse {
   std::string aux;
 };
 
-std::string encode_search_worker_rerank_response(const SearchWorkerRerankResponse& response);
+std::string encode_search_worker_rerank_response(
+    const SearchWorkerRerankResponse& response);
 
-bool decode_search_worker_rerank_response(const std::string& response_str, SearchWorkerRerankResponse* response);
+bool decode_search_worker_rerank_response(const std::string& response_str,
+                                          SearchWorkerRerankResponse* response);
+
+struct SearchWorkerDeleteRequest {
+  std::string collection_name;
+  std::string ids;
+  std::string user_id;
+  std::string ks_addr;
+  uint16_t ks_port = 0;
+};
+
+std::string encode_search_worker_delete_request(
+    const SearchWorkerDeleteRequest& request);
+
+bool decode_search_worker_delete_request(const std::string& request_str,
+                                         SearchWorkerDeleteRequest* request);
+
+struct SearchWorkerDeleteResponse {
+  bool status;
+  std::string msg;
+  std::string aux;
+};
+
+std::string encode_search_worker_delete_response(
+    const SearchWorkerDeleteResponse& response);
+
+bool decode_search_worker_delete_response(const std::string& response_str,
+                                          SearchWorkerDeleteResponse* response);
 
 }  // namespace hakes
 

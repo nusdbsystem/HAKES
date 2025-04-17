@@ -359,7 +359,6 @@ bool WorkerImpl::HandleSearchOp(uint64_t handle_id,
   rerank_request.d = request.d;
   rerank_request.k = request.k;
   rerank_request.metric_type = request.metric_type;
-  rerank_request.nprobe = request.nprobe;
   rerank_request.vecs = search_request.vecs;
   rerank_request.input_ids = search_response.ids;
   rerank_request.user_id = request.user_id;
