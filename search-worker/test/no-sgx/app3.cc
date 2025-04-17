@@ -129,7 +129,6 @@ int main(int argc, char* argv[]) {
   // load the test collection
   hakes::SearchWorkerLoadRequest load_req;
   auto resp_load = std::unique_ptr<char[]>(new char[4096 * 4096]);
-  load_req.d = cfg.data_dim;
   load_req.collection_name = "test";
   std::string encoded_load_req =
       hakes::encode_search_worker_load_request(load_req);
@@ -230,7 +229,6 @@ int main(int argc, char* argv[]) {
   rerank_req.d = cfg.data_dim;
   rerank_req.k = cfg.search_k;
   rerank_req.collection_name = "test";
-  rerank_req.nprobe = cfg.nprobe;
   rerank_req.metric_type = 1;
   rerank_req.vecs = search_req.vecs;
   rerank_req.input_ids = search_resp.ids;

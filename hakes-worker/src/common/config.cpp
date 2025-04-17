@@ -16,6 +16,8 @@
 
 #include "hakes-worker/common/config.h"
 
+#include <stdexcept>
+
 #include "utils/json.h"
 
 namespace hakes_worker {

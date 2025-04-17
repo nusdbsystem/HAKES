@@ -1,12 +1,21 @@
 #include "search-worker/index/ext/HakesFlatIndex.h"
 
 #include "search-worker/index/ext/index_io_ext.h"
+#include "utils/fileutil.h"
+
+#define FLAT_RINDEX_NAME "rindex.bin"
 
 namespace faiss {
 
-bool HakesFlatIndex::Initialize(hakes::IOReader* ff, hakes::IOReader* rf,
-                                hakes::IOReader* uf, bool keep_pa) {
-  return load_hakes_flatindex(rf, this);
+bool HakesFlatIndex::Initialize(const std::string& path, int mode,
+                                bool keep_pa) {
+  std::string rindex_path = path + "/" + FLAT_RINDEX_NAME;
+  std::unique_ptr<hakes::FileIOReader> rf =
+      hakes::IsFileExist(rindex_path)
+          ? std::unique_ptr<hakes::FileIOReader>(
+                new hakes::FileIOReader(rindex_path.c_str()))
+          : nullptr;
+  return load_hakes_flatindex(rf.get(), this);
 }
 
 bool HakesFlatIndex::AddWithIds(int n, int d, const float* vecs,
@@ -27,9 +36,12 @@ bool HakesFlatIndex::Search(int n, int d, const float* query,
   return true;
 }
 
-bool HakesFlatIndex::Checkpoint(hakes::IOWriter* ff,
-                                hakes::IOWriter* rf) const {
-  save_hakes_flatindex(rf, this);
+bool HakesFlatIndex::Checkpoint(const std::string& checkpoint_path) const {
+  std::string rindex_path = checkpoint_path + "/" + FLAT_RINDEX_NAME;
+  std::unique_ptr<hakes::FileIOWriter> rf =
+      std::unique_ptr<hakes::FileIOWriter>(
+          new hakes::FileIOWriter(rindex_path.c_str()));
+  save_hakes_flatindex(rf.get(), this);
   return true;
 }
 

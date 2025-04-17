@@ -68,14 +68,17 @@
         WRITEANDCHECK((vec).data(), size * 4);     \
     }
 
-#define READXBVECTOR(vec)                                            \
-    {                                                                \
-        uint64_t size;                                                 \
-        READANDCHECK(&size, 1);                                      \
+#define READXBVECTOR(vec)                                \
+    {                                                    \
+        uint64_t size;                                   \
+        READANDCHECK(&size, 1);                          \
         assert(size >= 0 && size < (uint64_t{1} << 40)); \
-        size *= 4;                                                   \
-        (vec).resize(size);                                          \
-        READANDCHECK((vec).data(), size);                            \
+        size *= 4;                                       \
+        (vec).resize(size);                              \
+        uint64_t batch_size = 1ULL<<20;                  \
+        for (uint64_t i = 0; i < size; i+= batch_size) { \
+            READANDCHECK((vec).data() + i, std::min(size - i, batch_size)); \
+        }                                                \
     }
 
 #endif  // HAKES_SEARCHWORKER_INDEX_IMPL_IOMACRO_H_

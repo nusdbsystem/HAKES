@@ -519,7 +519,6 @@ void IndexIVFL::search_preassigned(idx_t n, const float* x, idx_t k,
           const idx_t* ids = nullptr;
 
           if (!store_pairs) {
-            // sids = std::make_unique<InvertedLists::ScopedIds>(invlists, key);
             sids.reset(new InvertedLists::ScopedIds{invlists,
                                                     static_cast<size_t>(key)});
             ids = sids->get();

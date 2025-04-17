@@ -22,12 +22,16 @@
 #include "search-worker/index/ext/IdMap.h"
 #include "search-worker/index/ext/IndexFlatL.h"
 #include "search-worker/index/ext/IndexIVFPQFastScanL.h"
+#include "search-worker/index/ext/TagChecker.h"
 
 namespace faiss {
 
 class HakesIndex : public HakesCollection {
  public:
-  HakesIndex() { pthread_rwlock_init(&mapping_mu_, nullptr); }
+  HakesIndex() {
+    del_checker_.reset(new TagChecker<idx_t>());
+    pthread_rwlock_init(&mapping_mu_, nullptr);
+  }
   ~HakesIndex() {
     for (auto vt : vts_) {
       delete vt;
@@ -43,7 +47,9 @@ class HakesIndex : public HakesCollection {
     }
     if (q_cq_) {
       delete q_cq_;
+      delete q_quantizer_;
       q_cq_ = nullptr;
+      q_quantizer_ = nullptr;
     }
     pthread_rwlock_destroy(&mapping_mu_);
   }
@@ -56,7 +62,7 @@ class HakesIndex : public HakesCollection {
   HakesIndex& operator=(HakesIndex&&) = delete;
 
   // bool Initialize(const std::string& path);
-  bool Initialize(hakes::IOReader* ff, hakes::IOReader* rf, hakes::IOReader* uf,
+  bool Initialize(const std::string& path, int mode = 0,
                   bool keep_pa = false) override;
 
   void UpdateIndex(const HakesCollection* other) override;
@@ -70,6 +76,9 @@ class HakesIndex : public HakesCollection {
   bool AddBase(int n, int d, const float* vecs,
                const faiss::idx_t* ids) override;
 
+  bool AddRefine(int n, int d, const float* vecs,
+                 const faiss::idx_t* ids) override;
+
   bool Search(int n, int d, const float* query, const HakesSearchParams& params,
               std::unique_ptr<float[]>* distances,
               std::unique_ptr<faiss::idx_t[]>* labels) override;
@@ -79,17 +88,23 @@ class HakesIndex : public HakesCollection {
               float* base_distances, std::unique_ptr<float[]>* distances,
               std::unique_ptr<faiss::idx_t[]>* labels) override;
 
-  bool Checkpoint(hakes::IOWriter* ff, hakes::IOWriter* rf) const override;
+  bool Checkpoint(const std::string& checkpoint_path) const override;
 
-  bool GetParams(hakes::IOWriter* pf) const override;
+  std::string GetParams() const override;
 
-  bool UpdateParams(hakes::IOReader* pf) override;
+  bool UpdateParams(const std::string& params) override;
+
+  inline bool DeleteWithIds(int n, const idx_t* ids) override {
+    del_checker_->set(n, ids);
+    return true;
+  }
 
   std::string to_string() const override;
 
   //  private:
  public:
   std::string index_path_;
+  int mode = 0;
   bool use_ivf_sq_ = false;
   bool use_refine_sq_ = false;
   std::vector<faiss::VectorTransform*> vts_;
@@ -97,6 +112,7 @@ class HakesIndex : public HakesCollection {
   std::vector<faiss::VectorTransform*> q_vts_;
   faiss::Index* cq_ = nullptr;
   faiss::Index* q_cq_ = nullptr;
+  faiss::Index* q_quantizer_ = nullptr;
   std::unique_ptr<faiss::IndexIVFPQFastScanL> base_index_;
   mutable pthread_rwlock_t mapping_mu_;
   std::unique_ptr<faiss::IDMap> mapping_;
@@ -104,6 +120,9 @@ class HakesIndex : public HakesCollection {
 
   bool keep_pa_ = false;
   std::unordered_map<faiss::idx_t, faiss::idx_t> pa_mapping_;
+
+  // deletion checker
+  std::unique_ptr<TagChecker<idx_t>> del_checker_;
 };
 
 }  // namespace faiss

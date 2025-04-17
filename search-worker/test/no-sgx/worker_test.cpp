@@ -79,7 +79,6 @@ int main(int argc, char* argv[]) {
 
   hakes::SearchWorkerLoadRequest load_req;
   auto resp_load = std::unique_ptr<char[]>(new char[4096 * 4096]);
-  load_req.d = d;
   load_req.collection_name = TEST_COLLECTION;
   std::string encoded_load_req =
       hakes::encode_search_worker_load_request(load_req);
@@ -153,7 +152,6 @@ int main(int argc, char* argv[]) {
   hakes::SearchWorkerRerankRequest rerank_req;
   rerank_req.d = d;
   rerank_req.k = search_k;
-  rerank_req.nprobe = nprobe;
   rerank_req.metric_type = 1;
   rerank_req.vecs = search_req.vecs;
   rerank_req.input_ids = search_resp.ids;

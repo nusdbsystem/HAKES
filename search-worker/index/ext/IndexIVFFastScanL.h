@@ -30,6 +30,7 @@
 
 #include "search-worker/index/ext/IndexIVFL.h"
 #include "search-worker/index/utils/AlignedTable.h"
+#include "search-worker/index/ext/TagChecker.h"
 
 namespace faiss {
 
@@ -107,7 +108,6 @@ struct IndexIVFFastScanL : IndexIVFL {
   // early termination search parameters
   EarlyTerminationParams et_params;
 
-
   IndexIVFFastScanL(Index* quantizer, size_t d, size_t nlist, size_t code_size,
                     MetricType metric = METRIC_L2);
 
@@ -177,6 +177,7 @@ struct IndexIVFFastScanL : IndexIVFL {
                               const idx_t* assign, const float* centroid_dis,
                               float* distances, idx_t* labels, bool store_pairs,
                               const IVFSearchParameters* params = nullptr,
+                              const TagChecker<idx_t>* del_checker = nullptr,
                               IndexIVFStats* stats = nullptr) const;
 
   void range_search(idx_t n, const float* x, float radius,
@@ -194,7 +195,8 @@ struct IndexIVFFastScanL : IndexIVFL {
   void search_dispatch_implem_new(idx_t n, const float* x, idx_t k,
                                   float* distances, idx_t* labels,
                                   const CoarseQuantized& cq,
-                                  const NormTableScaler* scaler) const;
+                                  const NormTableScaler* scaler,
+                                  const TagChecker<idx_t>* del_checker) const;
 
   void range_search_dispatch_implem(idx_t n, const float* x, float radius,
                                     RangeSearchResult& rres,
@@ -227,8 +229,8 @@ struct IndexIVFFastScanL : IndexIVFL {
   void search_implem_12_new(idx_t n, const float* x, idx_t k,
                             SIMDResultHandlerToFloat& handler,
                             const CoarseQuantized& cq, size_t* ndis_out,
-                            size_t* nlist_out,
-                            const NormTableScaler* scaler) const;
+                            size_t* nlist_out, const NormTableScaler* scaler,
+                            const TagChecker<idx_t>* del_checker) const;
 
   // implem 14 is multithreaded internally across nprobes and queries
   void search_implem_14(idx_t n, const float* x, idx_t k, float* distances,

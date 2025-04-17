@@ -39,6 +39,7 @@ struct InvListUnit {
   std::vector<idx_t> ids_;
   mutable pthread_rwlock_t mu_;
   InvListUnit() { pthread_rwlock_init(&mu_, nullptr); }
+  ~InvListUnit() { pthread_rwlock_destroy(&mu_); }
 
   // move constructor
   InvListUnit(InvListUnit&& other) noexcept {
