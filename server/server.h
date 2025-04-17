@@ -38,11 +38,15 @@ std::string build_response(response_code_t code, const std::string& msg);
 class Server {
  public:
   Server(long port, Service* svc) : port_(port), service_(svc) {
-    try {
-      printf("worker pool size: %d\n", atoi(getenv("UV_THREADPOOL_SIZE")));
-    } catch (const std::exception& e) {
-      printf("UV_THREADPOOL_SIZE not set\n");
-      exit(1);
+    int uv_threadpool_size = 1;
+
+    char* threadpool_size_str = std::getenv("UV_THREADPOOL_SIZE");
+    if (threadpool_size_str == nullptr) {
+      printf("UV_THREADPOOL_SIZE not set. worker pool size defaulting to %d\n",
+             uv_threadpool_size);
+    } else {
+      uv_threadpool_size = std::atoi(threadpool_size_str);
+      printf("worker pool size: %d\n", uv_threadpool_size);
     }
   };
   virtual ~Server();
