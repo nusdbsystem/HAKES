@@ -90,7 +90,7 @@ def decode_search_worker_search_response(
         .reshape(-1, k)
         .tolist()
     )
-    scores =(
+    scores = (
         np.frombuffer(bytes.fromhex(resp["scores"]), dtype=np.float32)
         .reshape(-1, k)
         .tolist()
@@ -149,6 +149,7 @@ def decode_search_worker_rerank_response(resp: Dict, k: int) -> Dict:
     )
     return resp
 
+
 def encode_search_worker_delete_request(collection_name: str, ids: np.ndarray):
     data = {
         "collection_name": collection_name,
@@ -159,3 +160,16 @@ def encode_search_worker_delete_request(collection_name: str, ids: np.ndarray):
 
 def decode_search_worker_delete_response(resp: Dict) -> Dict:
     return {"status": resp["status"], "msg": resp["msg"]}
+
+
+def encode_search_worker_checkpoint_request(
+    collection_name: str,
+):
+    data = {
+        "collection_name": collection_name,
+    }
+    return data
+
+
+def decode_search_worker_checkpoint_response(resp: Dict) -> Dict:
+    return resp

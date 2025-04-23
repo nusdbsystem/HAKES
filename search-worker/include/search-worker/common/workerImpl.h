@@ -55,6 +55,9 @@ class WorkerImpl : public Worker {
   bool Delete(const char* req, size_t req_len, char* resp,
               size_t resp_len) override;
 
+  bool Checkpoint(const char* req, size_t req_len, char* resp,
+                  size_t resp_len) override;
+
   bool Close() override;
 
  private:

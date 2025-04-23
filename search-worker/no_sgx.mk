@@ -61,6 +61,11 @@ src/no-sgx/json.o: ${HAKES_ROOT_DIR}/utils/json.cpp
 src/no-sgx/searchservice.o: ${HAKES_ROOT_DIR}/message/searchservice.cpp
 	$(CXX) ${App_Cpp_Flags} -c $< -o $@
 	@echo "CXX <= $<"
+
+src/no-sgx/checkpoint.o: src/no-sgx/checkpoint.cpp
+	$(CXX) ${App_Cpp_Flags} -c $< -o $@
+	@echo "CXX <= $<"
+
 ## other srcs
 
 src/no-sgx/worker.o: src/common/worker.cc
@@ -77,6 +82,7 @@ Objects := src/no-sgx/worker.o \
 	src/no-sgx/fileutil.o \
 	src/no-sgx/hexutil.o \
 	src/no-sgx/json.o \
+	src/no-sgx/checkpoint.o \
 	src/no-sgx/searchservice.o \
 	src/no-sgx/index-build/ext/BlockInvertedListsL.o \
 	src/no-sgx/index-build/ext/HakesIndex.o \
