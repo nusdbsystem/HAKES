@@ -171,4 +171,4 @@ search_server_no_sgx: $(Server_Objects) libworker.a
 
 clean:
 	rm -rf src/no-sgx/index-build
-	rm -f app_no_sgx ${Objects} libworker.a server/no-sgx/*.o search_server_no_sgx app3_no_sgx
+	rm -f test/no-sgx/app_no_sgx ${Objects} libworker.a server/no-sgx/*.o test/no-sgx/search_server_no_sgx test/no-sgx/app3_no_sgx test/no-sgx/index_test test/no-sgx/worker_test

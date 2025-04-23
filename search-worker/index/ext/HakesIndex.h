@@ -47,8 +47,10 @@ class HakesIndex : public HakesCollection {
     }
     if (q_cq_) {
       delete q_cq_;
-      delete q_quantizer_;
       q_cq_ = nullptr;
+      if (use_ivf_sq_) {
+        delete q_quantizer_;
+      }
       q_quantizer_ = nullptr;
     }
     pthread_rwlock_destroy(&mapping_mu_);

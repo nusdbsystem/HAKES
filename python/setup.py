@@ -5,7 +5,7 @@ with open("README.md", mode="r", encoding="utf-8") as readme_file:
 
 setup(
     name="hakes",
-    version="0.0.1",
+    version="0.0.2",
     author="guoyu",
     description="hakes index train lib",
     long_description=readme,

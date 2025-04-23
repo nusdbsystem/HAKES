@@ -1,9 +1,9 @@
+import copy
+import io
+import logging
 import numpy as np
-import os
 import struct
 import torch
-import logging
-import copy
 
 from .debug import matrix_to_str
 
@@ -66,18 +66,17 @@ class HakesPreTransform(torch.nn.Module):
         return HakesPreTransform(vt_list)
 
     @classmethod
-    def from_bin_file(cls, pretransform_file: str):
-        with open(pretransform_file, "rb") as f:
-            n = struct.unpack("<i", f.read(4))[0]
-            vt_list = torch.nn.ModuleList()
-            for _ in range(n):
-                d_out = struct.unpack("<i", f.read(4))[0]
-                d_in = struct.unpack("<i", f.read(4))[0]
-                A = np.frombuffer(f.read(d_out * d_in * 4), dtype="<f").reshape(
-                    d_out, d_in
-                )
-                b = np.frombuffer(f.read(d_out * 4), dtype="<f")
-                vt_list.append(HakesVecTransform(d_in, d_out, A, b))
+    def from_reader(cls, reader: io.BufferedReader):
+        n = struct.unpack("<i", reader.read(4))[0]
+        vt_list = torch.nn.ModuleList()
+        for _ in range(n):
+            d_out = struct.unpack("<i", reader.read(4))[0]
+            d_in = struct.unpack("<i", reader.read(4))[0]
+            A = np.frombuffer(reader.read(d_out * d_in * 4), dtype="<f").reshape(
+                d_out, d_in
+            )
+            b = np.frombuffer(reader.read(d_out * 4), dtype="<f")
+            vt_list.append(HakesVecTransform(d_in, d_out, A, b))
         return cls(vt_list)
 
     def reduce_dim(self, target_d) -> bool:
@@ -117,7 +116,7 @@ class HakesPreTransform(torch.nn.Module):
             x = vt(x)
         return x
 
-    def save_as_bin(self, save_path, file_name="pre-transform.bin"):
+    def save_to_writer(self, writer: io.BufferedWriter):
         """
         format: (little endian)
         n: int32 - number of vector transform
@@ -127,23 +126,14 @@ class HakesPreTransform(torch.nn.Module):
             A: float32 array
             b: float32 array
         """
-
-        logging.info(f"Saving PreTransform to {save_path}/{file_name}")
-        os.makedirs(save_path, exist_ok=True)
-        with open(os.path.join(save_path, file_name), "wb") as f:
-            f.write(
-                struct.pack("<i", len(self.vt_list))
-            )  # Write the number of vector transforms
-            for vt in self.vt_list:
-                f.write(struct.pack("<i", vt.d_out))
-                f.write(struct.pack("<i", vt.d_in))
-                f.write(
-                    np.ascontiguousarray(
-                        vt.A.detach().cpu().numpy(), dtype="<f"
-                    ).tobytes()
-                )
-                f.write(
-                    np.ascontiguousarray(
-                        vt.b.detach().cpu().numpy(), dtype="<f"
-                    ).tobytes()
-                )
+        logging.info("Saving PreTransform")
+        writer.write(struct.pack("<i", len(self.vt_list)))
+        for vt in self.vt_list:
+            writer.write(struct.pack("<i", vt.d_out))
+            writer.write(struct.pack("<i", vt.d_in))
+            writer.write(
+                np.ascontiguousarray(vt.A.detach().cpu().numpy(), dtype="<f").tobytes()
+            )
+            writer.write(
+                np.ascontiguousarray(vt.b.detach().cpu().numpy(), dtype="<f").tobytes()
+            )
