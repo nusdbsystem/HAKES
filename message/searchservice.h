@@ -175,6 +175,31 @@ std::string encode_search_worker_delete_response(
 bool decode_search_worker_delete_response(const std::string& response_str,
                                           SearchWorkerDeleteResponse* response);
 
+struct SearchWorkerCheckpointRequest {
+  std::string collection_name;
+  std::string user_id;
+  std::string ks_addr;
+  uint16_t ks_port = 0;
+};
+
+std::string encode_search_worker_checkpoint_request(
+    const SearchWorkerCheckpointRequest& request);
+
+bool decode_search_worker_checkpoint_request(
+    const std::string& request_str, SearchWorkerCheckpointRequest* request);
+
+struct SearchWorkerCheckpointResponse {
+  bool status;
+  std::string msg;
+  std::string aux;
+};
+
+std::string encode_search_worker_checkpoint_response(
+    const SearchWorkerCheckpointResponse& response);
+
+bool decode_search_worker_checkpoint_response(
+    const std::string& response_str, SearchWorkerCheckpointResponse* response);
+
 }  // namespace hakes
 
 #endif  // HAKES_MESSAGE_SEARCHSERVICE_H_

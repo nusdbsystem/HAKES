@@ -17,6 +17,8 @@
 #ifndef HAKES_SEARCHWORKER_INDEX_EXT_HAKESCOLLECTION_H_
 #define HAKES_SEARCHWORKER_INDEX_EXT_HAKESCOLLECTION_H_
 
+#include <atomic>
+
 #include "search-worker/index/VectorTransform.h"
 #include "search-worker/index/ext/IdMap.h"
 #include "search-worker/index/ext/IndexFlatL.h"
@@ -74,6 +76,15 @@ class HakesCollection {
   virtual bool DeleteWithIds(int n, const faiss::idx_t* ids) = 0;
 
   virtual std::string to_string() const = 0;
+
+  inline bool is_loaded() const {
+    return loaded_.load(std::memory_order_relaxed);
+  }
+
+  inline void set_loaded() { loaded_.store(true, std::memory_order_relaxed); }
+
+  std::atomic<bool> loaded_ = false;
+  std::atomic<uint32_t> index_version_ = 0;
 };
 
 }  // namespace faiss

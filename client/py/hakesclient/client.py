@@ -17,6 +17,8 @@ from .message import (
     encode_search_worker_load_collection_request,
     encode_search_worker_delete_request,
     decode_search_worker_delete_response,
+    encode_search_worker_checkpoint_request,
+    decode_search_worker_checkpoint_response,
 )
 
 
@@ -77,9 +79,7 @@ class Client:
 
         return decode_search_worker_add_response(json.loads(response.text))
 
-    def search_worker_delete(
-        self, addr: str, collection_name: str, ids: np.ndarray
-    ):
+    def search_worker_delete(self, addr: str, collection_name: str, ids: np.ndarray):
         addr = self._validate_addr(addr)
         data = encode_search_worker_delete_request(collection_name, ids)
 
@@ -165,6 +165,24 @@ class Client:
 
         return decode_search_worker_rerank_response(json.loads(response.text), k)
 
+    def search_work_checkpoint(self, addr: str, collection_name: str):
+        addr = self._validate_addr(addr)
+        data = encode_search_worker_checkpoint_request(collection_name)
+
+        try:
+            response = requests.post(addr + "/checkpoint", json=data)
+        except Exception as e:
+            logging.warning(f"search worker load collection failed on {addr}: {e}")
+            return None
+
+        if response.status_code != 200:
+            logging.warning(
+                f"Failed to call search worker, status code: {response.status_code} {response.text}"
+            )
+            return None
+
+        return decode_search_worker_checkpoint_response(json.loads(response.text))
+
     def load_collection(self, collection_name: str):
         """
         Load a collection to the distributed HakesService V3
@@ -235,8 +253,9 @@ class Client:
         addr = self.cfg.search_worker_addrs[0]
         return self.search_worker_delete(addr, collection_name, ids)
 
-    def checkpoint(self):
+    def checkpoint(self, collection_name: str):
         """
         Checkpoint the vector indexes (not implemented)
         """
-        pass
+        addr = self.cfg.search_worker_addrs[0]
+        return self.search_work_checkpoint(addr, collection_name)

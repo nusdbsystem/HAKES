@@ -73,4 +73,4 @@ int main(int argc, char* argv[]) {
   return 0;
 }
 
-// ./sample-server 2351 path
+// ./sample-server 2351 path 1 0

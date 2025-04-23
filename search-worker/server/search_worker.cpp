@@ -20,6 +20,9 @@
 #include <cstring>
 
 namespace search_worker {
+
+const uint32_t kMaxRespLen = 4 << 20;
+
 SearchWorker::~SearchWorker() {
   if (initialized_) {
     Close();
@@ -43,32 +46,37 @@ bool SearchWorker::Handle(const std::string& url, const std::string& input,
                           std::string* output) {
   assert(initialized_);
   // allocate 1MB buffer
-  std::unique_ptr<char[]> buf = std::make_unique<char[]>(1024 * 1024);
-  memset(&buf[0], 0, 1024 * 1024);
+  std::unique_ptr<char[]> buf = std::make_unique<char[]>(kMaxRespLen);
+  memset(&buf[0], 0, kMaxRespLen);
 
   if (url == "/add") {
     auto success = worker_->AddWithIds(input.c_str(), input.size(), buf.get(),
-                                       1024 * 1024);
+                                       kMaxRespLen);
     output->assign(&buf[0]);
     return success;
   } else if (url == "/search") {
-    auto success = worker_->Search(input.c_str(), input.size(), buf.get(),
-                                   1024 * 1024);
+    auto success =
+        worker_->Search(input.c_str(), input.size(), buf.get(), kMaxRespLen);
     output->assign(&buf[0]);
     return success;
   } else if (url == "/rerank") {
-    auto success = worker_->Rerank(input.c_str(), input.size(), buf.get(),
-                                   1024 * 1024);
+    auto success =
+        worker_->Rerank(input.c_str(), input.size(), buf.get(), kMaxRespLen);
     output->assign(&buf[0]);
     return success;
   } else if (url == "/load") {
-    auto success = worker_->LoadCollection(input.c_str(), input.size(), buf.get(),
-                                   1024 * 1024);
+    auto success = worker_->LoadCollection(input.c_str(), input.size(),
+                                           buf.get(), kMaxRespLen);
     output->assign(&buf[0]);
     return success;
   } else if (url == "/delete") {
-    auto success = worker_->Delete(input.c_str(), input.size(), buf.get(),
-                                   1024 * 1024);
+    auto success =
+        worker_->Delete(input.c_str(), input.size(), buf.get(), kMaxRespLen);
+    output->assign(&buf[0]);
+    return success;
+  } else if (url == "/checkpoint") {
+    auto success = worker_->Checkpoint(input.c_str(), input.size(), buf.get(),
+                                       kMaxRespLen);
     output->assign(&buf[0]);
     return success;
   }

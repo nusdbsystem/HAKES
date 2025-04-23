@@ -20,6 +20,7 @@
 
 #include "message/keyservice_worker.h"
 #include "message/searchservice.h"
+#include "search-worker/common/checkpoint.h"
 #include "search-worker/common/workerImpl.h"
 #include "search-worker/index/ext/HakesFlatIndex.h"
 #include "search-worker/index/ext/HakesIndex.h"
@@ -35,6 +36,8 @@
 #include "Enclave_t.h"
 #include "ratls-channel/common/channel_client.h"
 #include "utils/tcrypto_ext.h"
+#else
+#include <filesystem>
 #endif  // USE_SGX
 
 namespace {
@@ -235,7 +238,7 @@ faiss::HakesCollection* WorkerImpl::GetCollection(
     const std::string& collection_name) {
   pthread_rwlock_rdlock(&collection_mu_);
   auto it = collections.find(collection_name);
-  if (it == collections.end()) {
+  if (it == collections.end() || !it->second->is_loaded()) {
     pthread_rwlock_unlock(&collection_mu_);
     return nullptr;
   }
@@ -255,25 +258,38 @@ bool WorkerImpl::LoadCollection(const char* req, size_t req_len, char* resp,
   }
 
   auto collection_name = load_req.collection_name;
-  auto collection_path = base_path_ + "/" + collection_name;
   auto loaded = HasLoadedCollection(collection_name);
+  faiss::HakesCollection* index = nullptr;
   if (!loaded) {
     pthread_rwlock_wrlock(&collection_mu_);
     if (collections.find(collection_name) == collections.end()) {
       collections[collection_name] =
           std::unique_ptr<faiss::HakesCollection>(new faiss::HakesIndex());
     }
-    auto index = collections[collection_name].get();
+    index = collections[collection_name].get();
     pthread_rwlock_unlock(&collection_mu_);
-    loaded = index->Initialize(collection_path, load_req.mode, false);
+    auto collection_path = base_path_ + "/" + collection_name;
+    auto checkpoint = hakes::get_latest_checkpoint_path(collection_path);
+    if (!checkpoint.empty()) {
+      loaded = index->Initialize(collection_path + "/" + checkpoint,
+                                 load_req.mode, false);
+      if (loaded) {
+        index->set_loaded();
+      }
+      auto index_version = hakes::get_checkpoint_no(checkpoint);
+      index->index_version_.store(index_version, std::memory_order_relaxed);
+    } else {
+      load_resp.msg = "checkpoint not found";
+    }
   }
   if (!loaded) {
     load_resp.status = false;
-    load_resp.msg = "load error";
+    load_resp.msg = "load error: " + load_resp.msg;
     load_resp.aux = "load error";
   } else {
     load_resp.status = true;
-    load_resp.msg = "load success";
+    load_resp.msg =
+        "load success: " + collection_name + "{" + index->to_string() + "}";
     load_resp.aux = "load success";
   }
 
@@ -307,7 +323,7 @@ bool WorkerImpl::AddWithIds(const char* req, size_t req_len, char* resp,
   auto index = GetCollection(collection_name);
   if (index == nullptr) {
     add_resp.status = false;
-    add_resp.msg = "collection does not exist error";
+    add_resp.msg = "collection is not loaded";
     std::string encoded_response =
         hakes::encode_search_worker_add_response(add_resp);
     assert(encoded_response.size() < resp_len);
@@ -597,6 +613,57 @@ bool WorkerImpl::Delete(const char* req, size_t req_len, char* resp,
   resp[encoded_response.size()] = '\0';
 
   return delete_resp.status;
+}
+
+bool WorkerImpl::Checkpoint(const char* req, size_t req_len, char* resp,
+                            size_t resp_len) {
+  hakes::SearchWorkerCheckpointRequest checkpoint_req;
+  hakes::SearchWorkerCheckpointResponse checkpoint_resp;
+  if (!hakes::decode_search_worker_checkpoint_request(std::string{req, req_len},
+                                                      &checkpoint_req)) {
+    return false;
+  }
+
+  // parse collection_name
+  auto collection_name = checkpoint_req.collection_name;
+  auto index = GetCollection(collection_name);
+  bool success = false;
+  if (index == nullptr) {
+    checkpoint_resp.status = false;
+    checkpoint_resp.msg = "collection does not exist error";
+  } else {
+    // checkpoint the index
+    std::string checkpoint_path =
+        base_path_ + "/" + collection_name + "/" +
+        hakes::format_checkpoint_path(
+            index->index_version_.fetch_add(1, std::memory_order_relaxed) + 1);
+    std::filesystem::create_directories(checkpoint_path);
+    std::filesystem::permissions(checkpoint_path,
+                                 std::filesystem::perms::owner_all |
+                                     std::filesystem::perms::group_all |
+                                     std::filesystem::perms::others_all,
+                                 std::filesystem::perm_options::add);
+    success = index->Checkpoint(checkpoint_path);
+  }
+
+  if (!success) {
+    checkpoint_resp.status = false;
+    checkpoint_resp.msg = "checkpoint error: " + checkpoint_resp.msg;
+    checkpoint_resp.aux = "checkpoint error";
+  } else {
+    checkpoint_resp.status = true;
+    checkpoint_resp.msg = "checkpoint success";
+    checkpoint_resp.aux = "checkpoint success";
+  }
+
+  // encode response
+  std::string encoded_response =
+      hakes::encode_search_worker_checkpoint_response(checkpoint_resp);
+  assert(encoded_response.size() < resp_len);
+  memcpy(resp, encoded_response.c_str(), encoded_response.size());
+  resp[encoded_response.size()] = '\0';
+
+  return success;
 }
 
 bool WorkerImpl::Close() { return true; }
