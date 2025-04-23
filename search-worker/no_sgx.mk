@@ -9,9 +9,13 @@ MKL_LIBRARY_PATH ?= $(HOME)/intel/oneapi/mkl/2024.0/lib/
 WARNING_IGNORE = -Wno-sign-compare -Wno-unused-variable -Wno-comment -Wno-unused-function -Wno-unused-but-set-variable -Wno-unused-parameter -Wno-type-limits
 COMMON_FLAGS = -fpic -fopenmp -ftree-vectorize -Wall -Wextra $(WARNING_IGNORE)
 ifeq ($(DEBUG), 1)
-	COMMON_FLAGS += -march=native -O2 -g -fsanitize=address
+	COMMON_FLAGS += -march=native -O2 -g
 else
 	COMMON_FLAGS += -Ofast -march=native
+endif
+
+ifeq ($(ASAN), 1)
+	COMMON_FLAGS += -fsanitize=address
 endif
 
 App_Cpp_Flags = -std=c++17 $(COMMON_FLAGS)
@@ -137,7 +141,11 @@ Server_Additional_Include_Flags := -Iserver -I$(LIBUV_DIR)/include -I$(LLHTTP_DI
 Server_Additional_Link_Flags := -L$(LIBUV_DIR)/lib -l:libuv_a.a -L$(LLHTTP_DIR)/lib -l:libllhttp.a -lrt -ldl
 
 ifeq ($(DEBUG), 1)
-	Server_Additional_Link_Flags += -g -fsanitize=address
+	Server_Additional_Link_Flags += -g
+endif
+
+ifeq ($(ASAN), 1)
+	Server_Additional_Link_Flags += -fsanitize=address
 endif
 
 server/no-sgx/service.o: $(HAKES_ROOT_DIR)/server/service.cpp
