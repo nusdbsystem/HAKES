@@ -48,6 +48,7 @@ struct Config {
   std::string index_path;
   std::string update_path = "";
   std::string save_path = ".";
+  faiss::MetricType metric = faiss::METRIC_INNER_PRODUCT;
 };
 
 std::string trim(std::string origin) {
@@ -103,6 +104,15 @@ Config parse_config(int argc, char** argv) {
       cfg.save_path = val;
     } else if (key.compare("type") == 0) {
       cfg.type = val;
+    } else if (key.compare("metric") == 0) {
+      if (val == "l2") {
+        cfg.metric = faiss::MetricType::METRIC_L2;
+      } else if (val == "ip") {
+        cfg.metric = faiss::MetricType::METRIC_INNER_PRODUCT;
+      } else {
+        std::cerr << "Invalid metric type: " << val << std::endl;
+        exit(1);
+      }
     }
   }
   file.close();
@@ -131,7 +141,7 @@ int testHakesFlatIndex(Config cfg) {
   int d = cfg.data_dim;
   int nq = cfg.data_num_query;
   int k = cfg.search_k;
-  auto metric = faiss::MetricType::METRIC_L2;
+  auto metric = cfg.metric;
 
   // generate vectors
   float* xb = new float[d * n];
@@ -193,6 +203,7 @@ int testHakesIndex(Config cfg) {
   int nq = cfg.data_num_query;
   int gt_len = cfg.data_groundtruth_len;
   int k = cfg.search_k;
+  auto metric = cfg.metric;
   // search_worker::WorkerImpl worker{};
   std::unique_ptr<faiss::HakesIndex> index(new faiss::HakesIndex());
   index->use_refine_sq_ = false;
@@ -375,8 +386,7 @@ int testHakesIndex(Config cfg) {
   for (auto nprobe : nprobe_list) {
     for (auto k_factor : k_factor_list) {
       auto k_base = k * k_factor;
-      faiss::HakesSearchParams params{nprobe, k, k_factor,
-                                      faiss::METRIC_INNER_PRODUCT};
+      faiss::HakesSearchParams params{nprobe, k, k_factor, metric};
 
       auto result = std::make_unique<faiss::idx_t[]>(k * nq);
       auto start = std::chrono::high_resolution_clock::now();
@@ -439,8 +449,7 @@ int testHakesIndex(Config cfg) {
   for (auto nprobe : nprobe_list2) {
     for (auto k_factor : k_factor_list2) {
       auto k_base = k * k_factor;
-      faiss::HakesSearchParams params{nprobe, k, k_factor,
-                                      faiss::METRIC_INNER_PRODUCT};
+      faiss::HakesSearchParams params{nprobe, k, k_factor, metric};
 
       auto result = std::make_unique<faiss::idx_t[]>(k * nq);
       auto start = std::chrono::high_resolution_clock::now();

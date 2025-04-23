@@ -10,7 +10,7 @@ def get_nn(
     sample_ratio: float = 0.01,
     seed: int = 0,
     device: str = "cpu",
-    normalize: bool = True,
+    normalize: bool = False,
     distance: str = "ip",
 ):
     """
@@ -36,13 +36,15 @@ def get_nn(
         if query is not None:
             query = query / np.linalg.norm(query, axis=1, keepdims=True)
 
-    if query is None:
-        np.random.seed(seed)
-        N = data.shape[0]
-        sample_size = int(N * sample_ratio)
-        sample_idx = np.random.choice(N, sample_size, replace=False)
-        print(f"sample_idx: {sample_idx}")
-        query = data[sample_idx]
+    if sample_ratio > 1:
+        raise ValueError(f"sample_ratio must be less than 1, but got {sample_ratio}")
+    np.random.seed(seed)
+    total_samples = data.shape[0] if query is None else query.shape[0]
+    sample_size = int(total_samples * sample_ratio)
+    sample_idx = np.random.choice(total_samples, sample_size, replace=False)
+    print(f"sample_idx: {sample_idx}")
+
+    query = data[sample_idx] if query is None else query[sample_idx]
 
     query = torch.from_numpy(query).float()
     data = torch.from_numpy(data).float()

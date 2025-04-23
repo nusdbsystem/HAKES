@@ -47,50 +47,17 @@ class HakesIndex(nn.Module):
         if not os.path.exists(path):
             raise ValueError(f"Index file {path} does not exist")
         else:
-            logging.info(f"Loading from hakes index directory")
-            return HakesIndex.load_from_hakes_index_dir(path, metric=metric)
+            logging.info(f"Loading from hakes index file")
+            return HakesIndex.load_from_hakes_index(path, metric=metric)
 
     @classmethod
-    def load_from_file(cls, path: str):
-        if not os.path.exists(path):
-            raise ValueError(f"Index file {path} does not exist")
-
+    def load_from_hakes_index(cls, path: str, metric="ip"):
         with open(path, "rb") as f:
-            # vts
-            n = struct.unpack("<i", f.read(4))[0]
-            vt_list = torch.nn.ModuleList()
-            for _ in range(n):
-                d_out = struct.unpack("<i", f.read(4))[0]
-                d_in = struct.unpack("<i", f.read(4))[0]
-                A = np.frombuffer(f.read(d_out * d_in * 4), dtype="<f").reshape(
-                    d_out, d_in
-                )
-                b = np.frombuffer(f.read(d_out * 4), dtype="<f")
-                vt_list.append(HakesVecTransform(d_in, d_out, A, b))
-            vts = HakesPreTransform(vt_list)
-
-            # ivf
-            d = struct.unpack("<i", f.read(4))[0]
-            ntotal = struct.unpack("<Q", f.read(8))[0]
-            # metric as 1 byte
-            metric_type = "ip" if struct.unpack("<B", f.read(1))[0] == 1 else "l2"
-            nlist = struct.unpack("<i", f.read(4))[0]
-            print(f"d:{d}, ntotal:{ntotal}, metric:{metric_type}, nlist:{nlist}")
-            centroids = np.frombuffer(f.read(nlist * d * 4), dtype=np.float32).reshape(
-                nlist, d
-            )
-            ivf = HakesIVF(d, nlist, centroids, by_residual=False)
-
-            # pq
-            d = struct.unpack("<i", f.read(4))[0]
-            m = struct.unpack("<i", f.read(4))[0]
-            nbits = struct.unpack("<i", f.read(4))[0]
-            codebooks = np.frombuffer(
-                f.read(m * 2**nbits * d // m * 4), dtype="<f"
-            ).reshape(m, 2**nbits, d // m)
-            pq = HakesPQ(d, m, nbits, codebooks)
-
-            return cls(vts, ivf, pq, metric=metric_type)
+            vts = HakesPreTransform.from_reader(f)
+            ivf = HakesIVF.from_reader(f)
+            pq = HakesPQ.from_reader(f)
+            assert ivf.metric == metric
+            return cls(vts, ivf, pq, metric=metric)
 
     def __str__(self):
         vts_str = f"VecTransform: {self.vts}\n" if self.vts is not None else ""
@@ -115,7 +82,14 @@ class HakesIndex(nn.Module):
             else:
                 raise ValueError(f"Unknown shape: {q.shape}, {cands.shape}")
         else:  # l2
-            return -torch.cdist(q, cands, p=2)
+            if len(q.shape) == 2 and len(cands.shape) == 2:
+                return torch.cdist(q, cands, p=2)
+            elif len(q.shape) == 3 and len(cands.shape) == 3:
+                return torch.cdist(q, cands, p=2).squeeze(1)
+            elif len(q.shape) == 2 and len(cands.shape) == 3:
+                return torch.cdist(q[:, None, :], cands, p=2).squeeze(1)
+            else:
+                raise ValueError(f"Unknown shape: {q.shape}, {cands.shape}")
 
     def kldiv_loss(self, target: torch.Tensor, score: torch.Tensor):
         if target is None or score is None:
@@ -238,44 +212,9 @@ class HakesIndex(nn.Module):
 
     def save_as_hakes_index(self, path: str):
         with open(path, "wb") as f:
-            # write vts
-            f.write(
-                struct.pack("<i", len(self.vts.vt_list))
-            )  # Write the number of vector transforms
-            for vt in self.vts.vt_list:
-                f.write(struct.pack("<i", vt.d_out))
-                f.write(struct.pack("<i", vt.d_in))
-                f.write(
-                    np.ascontiguousarray(
-                        vt.A.detach().cpu().numpy(), dtype="<f"
-                    ).tobytes()
-                )
-                f.write(
-                    np.ascontiguousarray(
-                        vt.b.detach().cpu().numpy(), dtype="<f"
-                    ).tobytes()
-                )
-            # write ivf
-            f.write(struct.pack("<i", self.ivf.d))
-            f.write(struct.pack("<Q", 0))  # ntotal set 0
-            f.write(struct.pack("<B", 1 if self.metric == "ip" else 0))
-            f.write(struct.pack("<i", self.ivf.nlist))
-            f.write(
-                np.ascontiguousarray(
-                    self.ivf.centroids.detach().cpu().numpy(), dtype="<f"
-                ).tobytes()
-            )
-
-            # write pq
-            f.write(struct.pack("<i", self.pq.d))
-            f.write(struct.pack("<i", self.pq.m))
-            f.write(struct.pack("<i", self.pq.nbits))
-            f.write(
-                np.ascontiguousarray(
-                    self.pq.codebooks.detach().cpu().numpy(), dtype="<f"
-                ).tobytes()
-            )
-
-            # write compressed vecs default info
-            f.write(struct.pack("<i", self.ivf.nlist))
-            f.write(struct.pack("<i", self.pq.m))
+            if self.vts is not None:
+                self.vts.save_to_writer(f)
+            if self.ivf is not None:
+                self.ivf.save_to_writer(f)
+            if self.pq is not None:
+                self.pq.save_to_writer(f)

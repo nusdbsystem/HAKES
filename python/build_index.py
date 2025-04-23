@@ -34,19 +34,19 @@ def parse_args():
         "--batch_size", type=int, help="Batch size for training the index", default=512
     )
     parser.add_argument(
-        "--vt_lr", type=float, help="Learning rate for vector transform", default=1e-4
+        "--vt_lr", type=float, help="Learning rate for vector transform", default=1e-5
     )
     parser.add_argument(
         "--pq_lr",
         type=float,
         help="Learning rate for product quantization",
-        default=1e-4,
+        default=1e-5,
     )
     parser.add_argument(
         "--lamb",
         type=float,
         help="Control the weight of vt loss, -1 to rescale against pq loss",
-        default=1,
+        default=-1,
     )
     parser.add_argument(
         "--device",
@@ -58,7 +58,19 @@ def parse_args():
         "--data_path", type=str, help="Path to data binary file", required=True
     )
     parser.add_argument(
+        "--query_path",
+        type=str,
+        help="Path to query binary file, if not provided, use data_path",
+        default=None,
+    )
+    parser.add_argument("--query_n", type=int, help="Number of query points", default=0)
+    parser.add_argument(
         "--output_path", type=str, help="Path to save the index", required=True
+    )
+    parser.add_argument(
+        "--use_query_recenter",
+        action="store_true",
+        help="Use query recentering",
     )
 
     return parser.parse_args()
@@ -67,13 +79,18 @@ def parse_args():
 def run(args):
     data = load_data_bin(args.data_path, args.N, args.d)
     index = init_hakes_params(data, args.dr, args.nlist, args.metric)
+    index.set_fixed_assignment(True)
 
     os.makedirs(args.output_path, exist_ok=True)
     index.save_as_hakes_index(os.path.join(args.output_path, "findex.bin"))
     sample_ratio = 1
     if args.N > 256 * 256:
         sample_ratio = 256 * 256 / args.N
-    dataset = build_dataset(data, sample_ratio=sample_ratio, nn=50)
+    if args.query_path is not None:
+        query = load_data_bin(args.query_path, args.query_n, args.d)
+        dataset = build_dataset(data, query, sample_ratio=sample_ratio, nn=50)
+    else:
+        dataset = build_dataset(data, sample_ratio=sample_ratio, nn=50)
     train_hakes_params(
         model=index,
         dataset=dataset,
@@ -89,7 +106,8 @@ def run(args):
         loss_method="hakes",
         device=args.device,
     )
-    recenter_ivf(index, data, sample_ratio)
+    print("Recenter IVF with data")
+    recenter_ivf(index, dataset.query, 1, args.metric)
     index.save_as_hakes_index(os.path.join(args.output_path, "uindex.bin"))
 
 

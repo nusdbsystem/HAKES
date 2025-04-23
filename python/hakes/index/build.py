@@ -57,7 +57,7 @@ def init_hakes_params(
     projected_data = data @ A
     # IVF
     ivf_start = time.time()
-    ivf = kmeans_ivf(projected_data, nlist, niter=20)
+    ivf = kmeans_ivf(projected_data, nlist, metric, niter=20)
     print(f"IVF training time: {time.time() - ivf_start}")
 
     # HakesIndex
@@ -169,15 +169,18 @@ def train_hakes_params(
             scheduler.step()
 
             optimizer.zero_grad()
-            model.ivf.normalize_centers()
+            if model.metric == "ip":
+                model.ivf.normalize_centers()
 
 
 def recenter_ivf(
     model: HakesIndex,
     data: np.ndarray,
     sample_ratio: float = 0.01,
+    metric: str = "ip",
 ):
     # perform recenter just on cpu
+    print(f"recenter with {sample_ratio} * {data.shape[0]} samples")
     model.to("cpu")
     recenter_indices = np.random.choice(
         data.shape[0], int(data.shape[0] * sample_ratio), replace=False
@@ -186,19 +189,25 @@ def recenter_ivf(
     grouped_vectors = [[] for _ in range(model.ivf.nlist)]
     batch_size = 1024 * 10
     for i in trange(0, recenter_data.shape[0], batch_size):
-        batch = model.vts(
+        batch = model.fixed_pretransform(
             torch.tensor(recenter_data[i : min(i + batch_size, recenter_data.shape[0])])
         )
         assignment = model.ivf.get_assignment(batch)
         for j in range(batch.shape[0]):
             grouped_vectors[assignment[j].item()].append(i + j)
     new_centers = []
+    old_centers = model.ivf.centroids.detach().cpu().numpy()
     for i in range(model.ivf.nlist):
+        if len(grouped_vectors[i]) == 0:
+            print(f"empty group {i}")
+            new_centers.append(old_centers[i])
+            continue
         vecs = recenter_data[grouped_vectors[i]]
         vecs_tensor = torch.tensor(vecs)
         vt_vecs = model.vts(vecs_tensor)
         rep = torch.mean(vt_vecs, dim=0)
-        normalized_rep = rep / torch.norm(rep)
-        new_centers.append(normalized_rep.detach().cpu().numpy())
+        if metric == "ip":
+            rep = rep / torch.norm(rep)
+        new_centers.append(rep.detach().cpu().numpy())
     model.ivf.update_centers(np.array(new_centers))
     return model
