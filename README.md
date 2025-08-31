@@ -2,6 +2,10 @@
 
 HAKES is an embedding vector data search system. It features modular and disaggregated architecture designs across the three data management modules, data storage, vector search and embedding model hosting. It aims for resource efficiency and fine-grained scaling in cloud/clustered deployment. Moreover, HAKES provides a proof-of-concept (PoC) implementation of security-protection mode leveraging Intel Software Guard Extentions (SGX) to operate in untrusted environment.
 
+## VLDB 2025
+
+To reproduce our experiments in our VLDB 2025 paper, please consider the [HAKES-Search Repo](https://github.com/nusdbsystem/HAKES-Search), a cleaned codebase we used for paper submission. We will also release the instructions for experiment data preparation and the trained index parameters there. 
+
 ## Key modules
 
 * `hakes-worker`: exposes Key-value and AKNN search interface.
@@ -29,7 +33,9 @@ All components of HAKES are containerised and instructions to build the images c
 
 ## Reference
 
-Please cite this repository when you use it in your research or development.
+Please cite our publication when you use HAKES in your research or development.
+
+* Guoyu Hu, Shaofeng Cai, Tien Tuan Anh Dinh, Zhongle Xie, Cong Yue, Gang Chen, and Beng Chin Ooi. HAKES: Scalable Vector Database for Embedding Search Service. PVLDB, 18(9): 3049 - 3062, 2025. doi:10.14778/3746405.3746427
 
 ## Contact
 
