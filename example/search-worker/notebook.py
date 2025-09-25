@@ -2,7 +2,7 @@
 """
 Launch the search-worker first
 
-docker run --name search-worker-test -p 2053:8080 -v $PWD/../gen-index/sample_data:/mounted_store/index hakes-searchworker-nosgx:v1
+docker run --name search-worker-test -p 2053:8080 -v $PWD/../gen-index/sample_data:/mounted_store/index hakes-searchworker:v1
 
 """
 # %%

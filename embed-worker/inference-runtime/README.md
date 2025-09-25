@@ -6,7 +6,7 @@ The model runtime API specifies only one base class and two functions interface 
 * `load_model()` - the trusted logic of loading the model
 * `execute_inference()` - the trusted logic of running inference on a model for one given request.
 
-And here we provide the implementation for sgx-dnet (deprecated), TFLM, and TVM.
+And here we provide the implementation for TFLM, and TVM.
 
 ## Building the model runtime library
 

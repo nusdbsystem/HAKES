@@ -38,17 +38,13 @@ else ifeq ($(INFERENCERT), TVMCRT_BERT)
 		MODULE_OBJS_DIR=$(shell readlink -f $(MODULE_OBJS_DIR))
 endif
 
-.PHONY: all inference_rt_libs clean install mrproper
+.PHONY: all inference_rt clean install mrproper
 
-all: inference_rt_libs
+all: inference_rt
 
-inference_rt_libs:
-	$(MAKE) -C $(DEP_RT_DIR) all PROJECT_ROOT_DIR=$(PROJECT_ROOT_DIR) HAKES_EMBED_ROOT=$(HAKES_EMBED_ROOT)
-	$(MAKE) -C $(RT_DIR) all PROJECT_ROOT_DIR=$(PROJECT_ROOT_DIR) HAKES_EMBED_ROOT=$(HAKES_EMBED_ROOT) $(RT_BUILD_OPTIONS)
-
-inference_rt_no_sgx:
-	$(MAKE) -C $(DEP_RT_DIR) no_sgx PROJECT_ROOT_DIR=$(PROJECT_ROOT_DIR) HAKES_EMBED_ROOT=$(HAKES_EMBED_ROOT)
-	$(MAKE) -C $(RT_DIR) no_sgx PROJECT_ROOT_DIR=$(PROJECT_ROOT_DIR) HAKES_EMBED_ROOT=$(HAKES_EMBED_ROOT) $(RT_BUILD_OPTIONS)
+inference_rt:
+	$(MAKE) -C $(DEP_RT_DIR) build PROJECT_ROOT_DIR=$(PROJECT_ROOT_DIR) HAKES_EMBED_ROOT=$(HAKES_EMBED_ROOT)
+	$(MAKE) -C $(RT_DIR) build PROJECT_ROOT_DIR=$(PROJECT_ROOT_DIR) HAKES_EMBED_ROOT=$(HAKES_EMBED_ROOT) $(RT_BUILD_OPTIONS)
 
 # install
 INSTALL_PREFIX ?= $(abspath ../install)

@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef HAKES_SEARCHWORKER_INDEX_IMPL_PLATFORM_MACROS_H_
-#define HAKES_SEARCHWORKER_INDEX_IMPL_PLATFORM_MACROS_H_
+#ifndef HAKES_SEARCHWORKER_INDEX_PLATFORM_MACROS_H_
+#define HAKES_SEARCHWORKER_INDEX_PLATFORM_MACROS_H_
 
 // basic int types and size_t
 #include <cstdint>
@@ -94,13 +94,9 @@ inline int __builtin_clzll(uint64_t x) {
 #define FAISS_API
 #define posix_memalign_free free
 
-#ifdef USE_SGX
-#define platform_memalign(p, a, s) \
-    (((*(p)) = memalign((a), (s))), *(p) ? 0 : errno)
-#else
+
 #define platform_memalign(p, a, s) \
     (((*(p)) = aligned_alloc((a), (s))), *(p) ? 0 : errno)
-#endif
 
 // aligned should be *in front* of the declaration, for compatibility with
 // windows
@@ -167,4 +163,4 @@ inline int __builtin_clzll(uint64_t x) {
 
 // clang-format on
 
-#endif  // HAKES_SEARCHWORKER_INDEX_IMPL_PLATFORM_MACROS_H_
+#endif  // HAKES_SEARCHWORKER_INDEX_PLATFORM_MACROS_H_

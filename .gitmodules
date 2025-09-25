@@ -4,9 +4,6 @@
 [submodule "deps/libuv"]
 	path = deps/libuv
 	url = https://github.com/libuv/libuv.git
-[submodule "deps/ratls"]
-	path = deps/ratls
-	url = https://github.com/hugy718/sgx-ra-tls.git
 [submodule "deps/tflm"]
 	path = deps/tflm
 	url = https://github.com/hugy718/tflite-micro.git

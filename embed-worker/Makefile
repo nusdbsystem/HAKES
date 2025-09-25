@@ -1,8 +1,3 @@
-SGX_SDK ?= /opt/intel/sgxsdk
-SGX_MODE ?= HW
-SGX_ARCH ?= x64
-SGX_DEBUG ?= 0
-
 ### Choose the inference runtime ###
 # INFERENCERT ?= TFLM_DEFAULT
 # INFERENCERT ?= TVMCRT_DEFAULT
@@ -32,55 +27,35 @@ else
 	$(error "Invalid inference runtime")
 endif
 
-.PHONY: all install clean mrproper sgx_u sgx_t enclave_api inference_rt
+.PHONY: all install clean mrproper inference_rt
 
 inference_rt:
 	echo $(MODULE_OBJS_DIR)
 	echo $(shell readlink -f $(MODULE_OBJS_DIR))
-	$(MAKE) -C inference-runtime all INFERENCERT=$(INFERENCERT) MODULE_OBJS_DIR=$(shell readlink -f $(MODULE_OBJS_DIR))
+	$(MAKE) -C inference-runtime inference_rt INFERENCERT=$(INFERENCERT) MODULE_OBJS_DIR=$(shell readlink -f $(MODULE_OBJS_DIR))
 	$(INSTALL) -d $(INSTALL_PREFIX) 
 	$(MAKE) -C inference-runtime install INFERENCERT=$(INFERENCERT) INSTALL_PREFIX=$(INSTALL_PREFIX)
 
-inference_rt_no_sgx:
-	echo $(MODULE_OBJS_DIR)
-	echo $(shell readlink -f $(MODULE_OBJS_DIR))
-	$(MAKE) -C inference-runtime inference_rt_no_sgx INFERENCERT=$(INFERENCERT) MODULE_OBJS_DIR=$(shell readlink -f $(MODULE_OBJS_DIR))
-	$(INSTALL) -d $(INSTALL_PREFIX) 
-	$(MAKE) -C inference-runtime install INFERENCERT=$(INFERENCERT) INSTALL_PREFIX=$(INSTALL_PREFIX)
+build: inference_rt
+	$(MAKE) -ef build.mk all INFERENCE_RT_INCLUDE_DIR=$(INFERENCE_RT_INCLUDE_DIR) INFERENCE_RT_LINK_DIR=$(INFERENCE_RT_LINK_DIR)
 
-enclave_api:
-	$(MAKE) -ef sgx_u.mk enclave_api SGX_MODE=$(SGX_MODE) SGX_DEBUG=$(SGX_DEBUG) INFERENCE_RT_INCLUDE_DIR=$(INFERENCE_RT_INCLUDE_DIR)
-	$(MAKE) -ef sgx_t.mk enclave_api SGX_MODE=$(SGX_MODE) SGX_DEBUG=$(SGX_DEBUG) INFERENCE_RT_INCLUDE_DIR=$(INFERENCE_RT_INCLUDE_DIR)
-
-no_sgx: inference_rt_no_sgx
-	$(MAKE) -ef no_sgx.mk all INFERENCE_RT_INCLUDE_DIR=$(INFERENCE_RT_INCLUDE_DIR) INFERENCE_RT_LINK_DIR=$(INFERENCE_RT_LINK_DIR)
-
-sgx_u: inference_rt
-	$(MAKE) -ef sgx_u.mk all SGX_MODE=$(SGX_MODE) SGX_DEBUG=$(SGX_DEBUG) INFERENCE_RT_INCLUDE_DIR=$(INFERENCE_RT_INCLUDE_DIR) INFERENCE_RT_LINK_DIR=$(INFERENCE_RT_LINK_DIR)
-
-sgx_t: inference_rt
-	$(MAKE) -ef sgx_t.mk all SGX_MODE=$(SGX_MODE) SGX_DEBUG=$(SGX_DEBUG) INFERENCE_RT_INCLUDE_DIR=$(INFERENCE_RT_INCLUDE_DIR) INFERENCE_RT_LINK_DIR=$(INFERENCE_RT_LINK_DIR)
-
-all: sgx_u sgx_t no_sgx
+all: build
 
 install:
 	$(INSTALL) -d $(INSTALL_INCLUDE_DIR)
 	cp -r include/* $(INSTALL_INCLUDE_DIR)
 	$(INSTALL) -d $(INSTALL_LIB_DIR)
-	if [ -f *.signed.so ]; then $(INSTALL) -C -m 664 *.signed.so $(INSTALL_LIB_DIR); fi;
 	if [ -f *.a ]; then $(INSTALL) -C -m 644 *.a $(INSTALL_LIB_DIR); fi;
 	$(INSTALL) -d $(INSTALL_BIN_DIR)
 	$(INSTALL) -C -m 755 embed_server* $(INSTALL_BIN_DIR)
 
 clean:
 	$(MAKE) -C inference-runtime INFERENCERT=$(INFERENCERT) clean
-	$(MAKE) -ef no_sgx.mk clean
-	$(MAKE) -ef sgx_u.mk clean
-	$(MAKE) -ef sgx_t.mk clean
+	$(MAKE) -ef build.mk clean
 
 mrproper: clean
 	$(MAKE) -C inference-runtime INFERENCERT=$(INFERENCERT) mrproper
 	rm -rf ./install
 
-# MODULE_OBJS_DIR=../examples/tvm-mb/mobilenet1.0/ make all
-# MODULE_OBJS_DIR=../examples/tvm-mb/mobilenet1.0/ make clean
+# INFERENCERT=TVMCRT_IMAGEEMBED MODULE_OBJS_DIR=${HOME}/.data/tvm-embed-mb/mbnetembed/ make all
+# INFERENCERT=TVMCRT_IMAGEEMBED MODULE_OBJS_DIR=${HOME}/.data/tvm-embed-mb/mbnetembed/ make mrproper

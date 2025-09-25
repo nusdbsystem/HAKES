@@ -31,15 +31,11 @@ enum HakesRequestDataType : uint8_t {
 };
 
 struct HakesAddRequest {
-  // keyservice part
+  // embed part
   std::string model_name;
-  std::string user_id;
-  std::string key_service_address;
-  uint16_t key_service_port;
-  // search part
+  // data part
   int n;
   int d;  // vector data dimension; set to -1 for raw data
-  // data part
   HakesRequestDataType data_type;
   std::string data;
   std::string ids;
@@ -54,7 +50,6 @@ bool decode_hakes_add_request(const std::string& request_str,
 struct HakesAddResponse {
   bool status;
   std::string msg;
-  std::vector<std::string> aux;
 };
 
 void encode_hakes_add_response(const HakesAddResponse& response,
@@ -64,11 +59,8 @@ bool decode_hakes_add_response(const std::string& response_str,
                                HakesAddResponse* response);
 
 struct HakeSearchRequest {
-  // keyservice part
+  // embed part
   std::string model_name;
-  std::string user_id;
-  std::string key_service_address;
-  uint16_t key_service_port;
   // search part
   int n;
   int d;  // vector data dimension; set to -1 for raw data
@@ -94,7 +86,6 @@ struct HakesSearchResponse {
   std::string ids;
   std::string scores;
   std::vector<std::string> data;
-  std::vector<std::string> aux;
 };
 
 void encode_hakes_search_response(const HakesSearchResponse& response,

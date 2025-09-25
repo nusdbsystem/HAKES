@@ -19,7 +19,7 @@
 
 #include <memory>
 
-#include "search-worker/common/worker.h"
+#include "search-worker/worker.h"
 #include "server/worker.h"
 
 namespace search_worker {
