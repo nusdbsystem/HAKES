@@ -27,10 +27,6 @@
 
 // #include <faiss/utils/distances_fused/distances_fused.h>
 
-#ifdef USE_SGX
-#include "search-worker/index/blas/sgemm.h"
-#else // USE_SGX
-
 extern "C" {
 
 #ifndef FINTEGER
@@ -54,7 +50,6 @@ int sgemm_(
         float* c,
         FINTEGER* ldc);
 }
-#endif // USE_SGX
 
 namespace faiss {
 

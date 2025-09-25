@@ -5,8 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#ifndef SGX_INDEX_PATCH_INDEX_UTILS_TRANSPOSE_AVX2_INL_H_
-#define SGX_INDEX_PATCH_INDEX_UTILS_TRANSPOSE_AVX2_INL_H_
+#ifndef HAKES_SEARCHWORKER_INDEX_UTILS_TRANSPOSE_AVX2_INL_H_
+#define HAKES_SEARCHWORKER_INDEX_UTILS_TRANSPOSE_AVX2_INL_H_
 
 // This file contains transposing kernels for AVX2 for
 // tiny float/int32 matrices, such as 8x2.
@@ -165,4 +165,4 @@ inline void transpose_8x8(
 
 #endif
 
-#endif  // SGX_INDEX_PATCH_INDEX_UTILS_TRANSPOSE_AVX2_INL_H_
+#endif  // HAKES_SEARCHWORKER_INDEX_UTILS_TRANSPOSE_AVX2_INL_H_

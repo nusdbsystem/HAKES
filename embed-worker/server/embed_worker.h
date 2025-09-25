@@ -3,7 +3,7 @@
 
 #include <mutex>
 
-#include "embed-worker/common/worker.h"
+#include "embed-worker/worker.h"
 #include "server/worker.h"
 
 namespace embed_worker {

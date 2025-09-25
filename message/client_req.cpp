@@ -17,6 +17,7 @@
 #include "client_req.h"
 
 #include <cstring>
+#include <stdexcept>
 
 #include "utils/hexutil.h"
 #include "utils/json.h"
@@ -73,10 +74,6 @@ void encode_hakes_add_response(const HakesAddResponse& response,
     data->append(json_response.dump());
     return;
   }
-  json_response["aux"] = json::Array();
-  for (auto& aux : response.aux) {
-    json_response["aux"].append(std::move(aux));
-  }
   data->append(json_response.dump());
 }
 
@@ -95,14 +92,6 @@ bool decode_hakes_add_response(const std::string& response_str,
 
   response->status = data["status"].ToBool();
   response->msg = data["msg"].ToString();
-
-  if (data.hasKey("aux")) {
-    response->aux.clear();
-    for (auto& aux : data["aux"].ArrayRange()) {
-      response->aux.push_back(aux.ToString());
-    }
-  }
-
   return true;
 }
 
@@ -114,10 +103,7 @@ void encode_hakes_search_request(const HakeSearchRequest& request,
   // prepare the request data
   json::JSON json_request;
   json_request["model_type"] = request.model_name;
-  json_request["user_id"] = request.user_id;
-  json_request["key_service_address"] = request.key_service_address;
-  json_request["key_service_port"] = request.key_service_port;
-  
+
   json_request["n"] = request.n;
   json_request["d"] = request.d;
   json_request["k"] = request.k;
@@ -161,16 +147,6 @@ bool decode_hakes_search_request(const std::string& request_str,
   if (data.hasKey("model_type")) {
     request->model_name = data["model_type"].ToString();
   }
-  if (data.hasKey("user_id")) {
-    request->user_id = data["user_id"].ToString();
-  }
-  if (data.hasKey("key_service_address")) {
-    request->key_service_address = data["key_service_address"].ToString();
-  }
-  if (data.hasKey("key_service_port")) {
-    request->key_service_port = data["key_service_port"].ToInt();
-  }
-
   return true;
 }
 
@@ -188,10 +164,6 @@ void encode_hakes_search_response(const HakesSearchResponse& response,
   if (!response.status) {
     data->append(json_response.dump());
     return;
-  }
-  json_response["aux"] = json::Array();
-  for (auto& aux : response.aux) {
-    json_response["aux"].append(std::move(aux));
   }
   json_response["data"] = json::Array();
   for (auto& data : response.data) {
@@ -221,13 +193,6 @@ bool decode_hakes_search_response(const std::string& response_str,
 
   if (data.hasKey("scores")) {
     response->scores = data["scores"].ToString();
-  }
-
-  if (data.hasKey("aux")) {
-    response->aux.clear();
-    for (auto& aux : data["aux"].ArrayRange()) {
-      response->aux.push_back(aux.ToString());
-    }
   }
 
   if (data.hasKey("data")) {

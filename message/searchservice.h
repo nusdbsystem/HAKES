@@ -33,9 +33,6 @@ std::unique_ptr<int64_t[]> decode_hex_int64s(const std::string& vecs_str,
 struct SearchWorkerLoadRequest {
   std::string collection_name;
   int mode = 0;
-  std::string user_id;
-  std::string ks_addr;
-  uint16_t ks_port = 0;
 };
 
 std::string encode_search_worker_load_request(
@@ -47,7 +44,6 @@ bool decode_search_worker_load_request(const std::string& request_str,
 struct SearchWorkerLoadResponse {
   bool status;
   std::string msg;
-  std::string aux;
 };
 
 std::string encode_search_worker_load_response(
@@ -61,9 +57,6 @@ struct SearchWorkerAddRequest {
   std::string collection_name;
   std::string vecs;
   std::string ids;
-  std::string user_id;
-  std::string ks_addr;
-  uint16_t ks_port = 0;
 };
 
 std::string encode_search_worker_add_request(
@@ -75,7 +68,6 @@ bool decode_search_worker_add_request(const std::string& request_str,
 struct SearchWorkerAddResponse {
   bool status;
   std::string msg;
-  std::string aux;
 };
 
 std::string encode_search_worker_add_response(
@@ -92,9 +84,6 @@ struct SearchWorkerSearchRequest {
   uint8_t metric_type;
   std::string collection_name;
   std::string vecs;
-  std::string user_id;
-  std::string ks_addr;
-  uint16_t ks_port = 0;
 };
 
 std::string encode_search_worker_search_request(
@@ -108,7 +97,6 @@ struct SearchWorkerSearchResponse {
   std::string msg;
   std::string ids;
   std::string scores;
-  std::string aux;
 };
 
 std::string encode_search_worker_search_response(
@@ -124,9 +112,6 @@ struct SearchWorkerRerankRequest {
   std::string collection_name;
   std::string vecs;
   std::string input_ids;
-  std::string user_id;
-  std::string ks_addr;
-  uint16_t ks_port = 0;
 };
 
 std::string encode_search_worker_rerank_request(
@@ -140,7 +125,6 @@ struct SearchWorkerRerankResponse {
   std::string msg;
   std::string ids;
   std::string scores;
-  std::string aux;
 };
 
 std::string encode_search_worker_rerank_response(
@@ -152,9 +136,6 @@ bool decode_search_worker_rerank_response(const std::string& response_str,
 struct SearchWorkerDeleteRequest {
   std::string collection_name;
   std::string ids;
-  std::string user_id;
-  std::string ks_addr;
-  uint16_t ks_port = 0;
 };
 
 std::string encode_search_worker_delete_request(
@@ -166,7 +147,6 @@ bool decode_search_worker_delete_request(const std::string& request_str,
 struct SearchWorkerDeleteResponse {
   bool status;
   std::string msg;
-  std::string aux;
 };
 
 std::string encode_search_worker_delete_response(
@@ -177,9 +157,6 @@ bool decode_search_worker_delete_response(const std::string& response_str,
 
 struct SearchWorkerCheckpointRequest {
   std::string collection_name;
-  std::string user_id;
-  std::string ks_addr;
-  uint16_t ks_port = 0;
 };
 
 std::string encode_search_worker_checkpoint_request(
@@ -191,7 +168,6 @@ bool decode_search_worker_checkpoint_request(
 struct SearchWorkerCheckpointResponse {
   bool status;
   std::string msg;
-  std::string aux;
 };
 
 std::string encode_search_worker_checkpoint_response(

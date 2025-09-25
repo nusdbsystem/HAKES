@@ -36,11 +36,8 @@ struct EmbedWorkerRequest {
    */
   std::string EncodeTo() const;
 
-  std::string encrypted_sample_;
+  std::string data_;
   std::string model_name_;
-  std::string user_id_;
-  std::string key_service_address_;
-  uint16_t key_service_port_;
 };
 
 EmbedWorkerRequest DecodeEmbedWorkerRequest(const std::string& request);
@@ -50,7 +47,6 @@ struct EmbedWorkerResponse {
 
   bool status;
   std::string output;
-  std::string aux;
 };
 
 EmbedWorkerResponse DecodeEmbedWorkerResponse(const std::string& response);

@@ -16,6 +16,8 @@
 
 #include "message/message.h"
 
+#include <stdexcept>
+
 namespace hakes {
 
 void encode_add_request(const AddRequest& request, std::string* data) {

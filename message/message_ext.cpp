@@ -16,6 +16,8 @@
 
 #include "message_ext.h"
 
+#include <stdexcept>
+
 namespace hakes {
 
 void encode_extended_add_request(const ExtendedAddRequest& request,

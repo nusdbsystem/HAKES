@@ -42,7 +42,7 @@ Finally, go to the module directory (e.g., `hakes-worker/`) and build.
 
 ```bash
 cd hakes-worker
-make no_sgx -j
+make all -j
 ```
 
 ### Enabling debug (GDB)
@@ -58,7 +58,7 @@ Go to the module directory and build with debugging symbol enabled.
 
 ```bash
 cd hakes-worker
-DEBUG=1 make no_sgx -j
+DEBUG=1 make all -j
 ```
 
 Set the program to load `libasan`.

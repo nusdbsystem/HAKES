@@ -23,9 +23,6 @@
 
 using namespace faiss;
 
-#ifdef USE_SGX
-#include "search-worker/index/blas/sgemm.h"
-#else // USE_SGX
 extern "C" {
 
 // this is to keep the clang syntax checker happy
@@ -133,7 +130,6 @@ int sgemm_(
 //         FINTEGER* lwork,
 //         FINTEGER* info);
 }
-#endif // USE_SGX
 
 /*********************************************
  * VectorTransform

@@ -19,7 +19,7 @@
 
 #include <memory>
 
-#include "hakes-worker/common/worker.h"
+#include "hakes-worker/worker.h"
 #include "server/worker.h"
 
 namespace hakes_worker {

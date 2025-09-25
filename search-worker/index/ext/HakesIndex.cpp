@@ -521,17 +521,35 @@ std::string HakesIndex::to_string() const {
     ret += "\n  d_in " + std::to_string(vt->d_in) + ", d_out " +
            std::to_string(vt->d_out);
   }
-  ret =
-      ret + "\nbase_index n " + std::to_string(base_index_->ntotal) +
-      ", nlist " + std::to_string(base_index_->nlist) + ", d " +
-      std::to_string(base_index_->d) + ", pq m " +
-      std::to_string(base_index_->pq.M) + ", nbits " +
-      std::to_string(base_index_->pq.nbits) + ", metric: " +
-      (base_index_->metric_type == faiss::METRIC_INNER_PRODUCT ? "ip" : "l2") +
-      "\nmapping size " + std::to_string(mapping_->size()) +
-      "\nrefine_index n " + std::to_string(refine_index_->ntotal) + ", d " +
-      std::to_string(refine_index_->d) + ", metric: " +
-      (refine_index_->metric_type == faiss::METRIC_INNER_PRODUCT ? "ip" : "l2");
+  if (base_index_) {
+    ret =
+        ret + "\nbase_index n " + std::to_string(base_index_->ntotal) +
+        ", nlist " + std::to_string(base_index_->nlist) + ", d " +
+        std::to_string(base_index_->d) + ", pq m " +
+        std::to_string(base_index_->pq.M) + ", nbits " +
+        std::to_string(base_index_->pq.nbits) + ", metric: " +
+        (base_index_->metric_type == faiss::METRIC_INNER_PRODUCT ? "ip" : "l2");
+    ret = ret + "\nivf sq " + (use_ivf_sq_ ? "true" : "false");
+    if (base_index_->use_early_termination_) {
+      ret = ret + "\nearly termination true beta " +
+            std::to_string(base_index_->et_params.beta) + " ce " +
+            std::to_string(base_index_->et_params.ce);
+    } else {
+      ret = ret + "\nearly termination false";
+    }
+    ret = ret + ((has_q_index_) ? "\nloaded q_index" : "\nno q_index");
+  }
+  if (refine_index_) {
+    ret = ret + "\nmapping size " + std::to_string(mapping_->size()) +
+          "\nrefine_index n " + std::to_string(refine_index_->ntotal) + ", d " +
+          std::to_string(refine_index_->d) + ", metric: " +
+          (refine_index_->metric_type == faiss::METRIC_INNER_PRODUCT ? "ip"
+                                                                     : "l2");
+  }
+  // pa support port
+  if (keep_pa_) {
+    ret += "\npa mapping size " + std::to_string(pa_mapping_.size());
+  }
   return ret;
 };
 

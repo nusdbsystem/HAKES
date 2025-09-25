@@ -6,6 +6,10 @@ HAKES is an embedding vector data search system. It features modular and disaggr
 
 To reproduce our experiments in our VLDB 2025 paper, please consider the [HAKES-Search Repo](https://github.com/nusdbsystem/HAKES-Search), a cleaned codebase we used for paper submission. We will also release the instructions for experiment data preparation and the trained index parameters there. 
 
+## Pause for SGX support
+
+With a shifted focus for developing more features around vector search, we stopped maintaining code compatibility for SGX deployment. Please use the `sgx-support` branch for the original HAKES support of SGX.
+
 ## Key modules
 
 * `hakes-worker`: exposes Key-value and AKNN search interface.

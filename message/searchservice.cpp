@@ -55,11 +55,6 @@ std::string encode_search_worker_load_request(
   json::JSON ret;
   ret["collection_name"] = request.collection_name;
   ret["mode"] = request.mode;
-  if (!request.ks_addr.empty()) {
-    ret["user_id"] = request.user_id;
-    ret["ks_addr"] = request.ks_addr;
-    ret["ks_port"] = request.ks_port;
-  }
   return ret.dump();
 }
 
@@ -68,11 +63,6 @@ bool decode_search_worker_load_request(const std::string& request_str,
   auto input = json::JSON::Load(request_str);
   request->collection_name = input["collection_name"].ToString();
   request->mode = input.hasKey("mode") ? input["mode"].ToInt() : 0;
-  if (input.hasKey("ks_addr")) {
-    request->user_id = input["user_id"].ToString();
-    request->ks_addr = input["ks_addr"].ToString();
-    request->ks_port = input["ks_port"].ToInt();
-  }
   return true;
 }
 
@@ -81,7 +71,6 @@ std::string encode_search_worker_load_response(
   json::JSON ret;
   ret["status"] = response.status;
   ret["msg"] = response.msg;
-  ret["aux"] = response.aux;
   return ret.dump();
 }
 
@@ -90,7 +79,6 @@ bool decode_search_worker_load_response(const std::string& response_str,
   auto input = json::JSON::Load(response_str);
   response->status = input["status"].ToBool();
   response->msg = input["msg"].ToString();
-  response->aux = input["aux"].ToString();
   return true;
 }
 
@@ -101,11 +89,6 @@ std::string encode_search_worker_add_request(
   ret["collection_name"] = request.collection_name;
   ret["vecs"] = request.vecs;
   ret["ids"] = request.ids;
-  if (!request.ks_addr.empty()) {
-    ret["user_id"] = request.user_id;
-    ret["ks_addr"] = request.ks_addr;
-    ret["ks_port"] = request.ks_port;
-  }
   return ret.dump();
 }
 
@@ -116,11 +99,6 @@ bool decode_search_worker_add_request(const std::string& request_str,
   request->collection_name = input["collection_name"].ToString();
   request->vecs = input["vecs"].ToString();
   request->ids = input["ids"].ToString();
-  if (input.hasKey("ks_addr")) {
-    request->user_id = input["user_id"].ToString();
-    request->ks_addr = input["ks_addr"].ToString();
-    request->ks_port = input["ks_port"].ToInt();
-  }
   return true;
 }
 
@@ -129,7 +107,6 @@ std::string encode_search_worker_add_response(
   json::JSON ret;
   ret["status"] = response.status;
   ret["msg"] = response.msg;
-  ret["aux"] = response.aux;
   return ret.dump();
 }
 
@@ -138,7 +115,6 @@ bool decode_search_worker_add_response(const std::string& response_str,
   auto input = json::JSON::Load(response_str);
   response->status = input["status"].ToBool();
   response->msg = input["msg"].ToString();
-  response->aux = input["aux"].ToString();
   return true;
 }
 
@@ -152,11 +128,6 @@ std::string encode_search_worker_search_request(
   ret["metric_type"] = request.metric_type;
   ret["collection_name"] = request.collection_name;
   ret["vecs"] = request.vecs;
-  if (!request.ks_addr.empty()) {
-    ret["user_id"] = request.user_id;
-    ret["ks_addr"] = request.ks_addr;
-    ret["ks_port"] = request.ks_port;
-  }
   return ret.dump();
 }
 
@@ -170,11 +141,6 @@ bool decode_search_worker_search_request(const std::string& request_str,
   request->metric_type = input["metric_type"].ToInt();
   request->collection_name = input["collection_name"].ToString();
   request->vecs = input["vecs"].ToString();
-  if (input.hasKey("ks_addr")) {
-    request->user_id = input["user_id"].ToString();
-    request->ks_addr = input["ks_addr"].ToString();
-    request->ks_port = input["ks_port"].ToInt();
-  }
   return true;
 }
 
@@ -185,7 +151,6 @@ std::string encode_search_worker_search_response(
   ret["msg"] = response.msg;
   ret["ids"] = response.ids;
   ret["scores"] = response.scores;
-  ret["aux"] = response.aux;
   return ret.dump();
 }
 
@@ -196,7 +161,6 @@ bool decode_search_worker_search_response(
   response->msg = input["msg"].ToString();
   response->ids = input["ids"].ToString();
   response->scores = input["scores"].ToString();
-  response->aux = input["aux"].ToString();
   return true;
 }
 
@@ -209,11 +173,6 @@ std::string encode_search_worker_rerank_request(
   ret["collection_name"] = request.collection_name;
   ret["vecs"] = request.vecs;
   ret["input_ids"] = request.input_ids;
-  if (!request.ks_addr.empty()) {
-    ret["user_id"] = request.user_id;
-    ret["ks_addr"] = request.ks_addr;
-    ret["ks_port"] = request.ks_port;
-  }
   return ret.dump();
 }
 
@@ -226,11 +185,6 @@ bool decode_search_worker_rerank_request(const std::string& request_str,
   request->collection_name = input["collection_name"].ToString();
   request->vecs = input["vecs"].ToString();
   request->input_ids = input["input_ids"].ToString();
-  if (input.hasKey("ks_addr")) {
-    request->user_id = input["user_id"].ToString();
-    request->ks_addr = input["ks_addr"].ToString();
-    request->ks_port = input["ks_port"].ToInt();
-  }
   return true;
 }
 
@@ -241,7 +195,6 @@ std::string encode_search_worker_rerank_response(
   ret["msg"] = response.msg;
   ret["ids"] = response.ids;
   ret["scores"] = response.scores;
-  ret["aux"] = response.aux;
   return ret.dump();
 }
 
@@ -252,7 +205,6 @@ bool decode_search_worker_rerank_response(
   response->msg = input["msg"].ToString();
   response->ids = input["ids"].ToString();
   response->scores = input["scores"].ToString();
-  response->aux = input["aux"].ToString();
   return true;
 }
 
@@ -261,11 +213,6 @@ std::string encode_search_worker_delete_request(
   json::JSON ret;
   ret["collection_name"] = request.collection_name;
   ret["ids"] = request.ids;
-  if (!request.ks_addr.empty()) {
-    ret["user_id"] = request.user_id;
-    ret["ks_addr"] = request.ks_addr;
-    ret["ks_port"] = request.ks_port;
-  }
   return ret.dump();
 }
 
@@ -274,11 +221,6 @@ bool decode_search_worker_delete_request(const std::string& request_str,
   auto input = json::JSON::Load(request_str);
   request->collection_name = input["collection_name"].ToString();
   request->ids = input["ids"].ToString();
-  if (input.hasKey("ks_addr")) {
-    request->user_id = input["user_id"].ToString();
-    request->ks_addr = input["ks_addr"].ToString();
-    request->ks_port = input["ks_port"].ToInt();
-  }
   return true;
 }
 
@@ -287,7 +229,6 @@ std::string encode_search_worker_delete_response(
   json::JSON ret;
   ret["status"] = response.status;
   ret["msg"] = response.msg;
-  ret["aux"] = response.aux;
   return ret.dump();
 }
 
@@ -296,7 +237,6 @@ bool decode_search_worker_delete_response(
   auto input = json::JSON::Load(response_str);
   response->status = input["status"].ToBool();
   response->msg = input["msg"].ToString();
-  response->aux = input["aux"].ToString();
   return true;
 }
 
@@ -304,11 +244,6 @@ std::string encode_search_worker_checkpoint_request(
     const SearchWorkerCheckpointRequest& request) {
   json::JSON ret;
   ret["collection_name"] = request.collection_name;
-  if (!request.ks_addr.empty()) {
-    ret["user_id"] = request.user_id;
-    ret["ks_addr"] = request.ks_addr;
-    ret["ks_port"] = request.ks_port;
-  }
   return ret.dump();
 }
 
@@ -316,11 +251,6 @@ bool decode_search_worker_checkpoint_request(
     const std::string& request_str, SearchWorkerCheckpointRequest* request) {
   auto input = json::JSON::Load(request_str);
   request->collection_name = input["collection_name"].ToString();
-  if (input.hasKey("ks_addr")) {
-    request->user_id = input["user_id"].ToString();
-    request->ks_addr = input["ks_addr"].ToString();
-    request->ks_port = input["ks_port"].ToInt();
-  }
   return true;
 }
 
@@ -329,7 +259,6 @@ std::string encode_search_worker_checkpoint_response(
   json::JSON ret;
   ret["status"] = response.status;
   ret["msg"] = response.msg;
-  ret["aux"] = response.aux;
   return ret.dump();
 }
 
@@ -338,7 +267,6 @@ bool decode_search_worker_checkpoint_response(
   auto input = json::JSON::Load(response_str);
   response->status = input["status"].ToBool();
   response->msg = input["msg"].ToString();
-  response->aux = input["aux"].ToString();
   return true;
 }
 
