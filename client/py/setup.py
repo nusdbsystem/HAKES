@@ -15,6 +15,10 @@ setup(
     install_requires=[
         "tqdm>=4.66.2",
         "numpy>=1.19.5",
+        "huggingface-hub>=0.33.4",
+        "pymongo>=4.13.2",
+        "openai>=1.90.0",
+        "anthropic>=0.55.0",
     ],
     keywords="vector-database, client",
 )

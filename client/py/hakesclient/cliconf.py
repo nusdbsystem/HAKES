@@ -1,9 +1,48 @@
+# Copyright 2024 The HAKES Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import json
 import os
-from typing import List
+from typing import List, Optional
 
 
 class ClientConfig:
+    def __init__(
+        self,
+        search_worker_addrs: Optional[List[str]] = None,
+        preferred_search_worker: int = 0,
+        hakes_addr: str = "",
+        embed_endpoint_type: str = "",
+        embed_endpoint_config: str = "",
+        store_type: str = "",
+        store_addr: str = "",
+    ):
+        self.search_worker_addrs = search_worker_addrs or []
+        self.preferred_search_worker = preferred_search_worker
+        self.hakes_addr = hakes_addr
+        self.embed_endpoint_type = (
+            embed_endpoint_type if embed_endpoint_type and embed_endpoint_type != "none" else ""
+        )
+        self.embed_endpoint_config = embed_endpoint_config
+        self.store_type = (
+            store_type if store_type and store_type != "none" and store_addr else ""
+        )
+        self.store_addr = (
+            store_addr if store_type and store_type != "none" and store_addr else ""
+        )
+        self.n = len(self.search_worker_addrs)
+
     @staticmethod
     def from_file(path: str) -> "ClientConfig":
         """Read client config from file. The file must contains ALL needed fields.
@@ -31,7 +70,6 @@ class ClientConfig:
                 data["hakes_addr"],
                 data["embed_endpoint_type"],
                 data["embed_endpoint_config"],
-                data["embed_endpoint_addr"],
                 data["store_type"],
                 data["store_addr"],
             )
@@ -40,46 +78,10 @@ class ClientConfig:
 
         return conf
 
-    def __init__(
-        self,
-        search_worker_addrs: List[str] = [],
-        preferred_search_worker: int = 0,
-        hakes_addr: str = "",
-        embed_endpoint_type: str = "",
-        embed_endpoint_config: str = "",
-        embed_endpoint_addr: str = "",
-        store_type: str = "",
-        store_addr: str = "",
-    ):
-        self.search_worker_addrs = search_worker_addrs
-        self.preferred_search_worker = preferred_search_worker
-        self.hakes_addr = hakes_addr
-        self.embed_endpoint_type = (
-            ""
-            if (not embed_endpoint_type or embed_endpoint_type == "none")
-            else embed_endpoint_type
-        )
-        self.embed_endpoint_config = embed_endpoint_config
-        self.embed_endpoint_addr = (
-            ""
-            if not self.embed_endpoint_type or not embed_endpoint_addr
-            else embed_endpoint_addr
-        )
-        self.store_type = (
-            ""
-            if store_type == "none" or store_type == None or store_addr == ""
-            else store_type
-        )
-        self.store_addr = (
-            "" if store_type == "none" or store_addr == None else store_addr
-        )
-        print(self)
-
-        self.n = len(search_worker_addrs)
-
-    def save(self, path):
+    def save(self, path: str):
         # save as a json file
-        json.dump(self.__dict__, path)
+        with open(path, "w") as f:
+            json.dump(self.to_dict(), f)
 
     def __repr__(self) -> str:
         return f"ClientConfig({self.to_dict()})"
@@ -91,7 +93,6 @@ class ClientConfig:
             "hakes_addr": self.hakes_addr,
             "embed_endpoint_type": self.embed_endpoint_type,
             "embed_endpoint_config": self.embed_endpoint_config,
-            "embed_endpoint_addr": self.embed_endpoint_addr,
             "store_type": self.store_type,
             "store_addr": self.store_addr,
         }

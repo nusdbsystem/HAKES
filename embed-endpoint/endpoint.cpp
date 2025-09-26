@@ -19,6 +19,7 @@
 // supported external endpoints
 #include "huggingface_endpoint.h"
 #include "openai_endpoint.h"
+#include "ollama_endpoint.h"
 
 namespace hakes_embedendpoint {
 std::unique_ptr<EmbedEndpoint> CreateEmbedEndpoint(
@@ -28,6 +29,8 @@ std::unique_ptr<EmbedEndpoint> CreateEmbedEndpoint(
     return std::make_unique<OpenAIEndpoint>(embed_endpoint_config);
   } else if (embed_endpoint_type == "huggingface") {
     return std::make_unique<HuggingFaceEndpoint>(embed_endpoint_config);
+  } else if (embed_endpoint_type == "ollama") {
+    return std::make_unique<OllamaEndpoint>(embed_endpoint_config);
   } else {
     printf("Error: unknown embed endpoint type: %s\n",
            embed_endpoint_type.c_str());
