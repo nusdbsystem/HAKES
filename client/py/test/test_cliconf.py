@@ -16,7 +16,6 @@ def test_load_from_file():
     assert conf.preferred_search_worker == 0
     assert conf.hakes_addr == "127.0.0.1:8080"
     assert conf.embed_endpoint_type == "openai"
-    assert conf.embed_endpoint_addr == ""
     assert conf.embed_endpoint_config == ""
     assert conf.store_type == "hakes"
     assert conf.store_addr == "127.0.0.1:2600"
@@ -31,7 +30,6 @@ def test_to_dict():
         "hakes_addr": "127.0.0.1:8080",
         "embed_endpoint_type": "openai",
         "embed_endpoint_config": "",
-        "embed_endpoint_addr": "",
         "store_type": "hakes",
         "store_addr": "127.0.0.1:2600",
     }
