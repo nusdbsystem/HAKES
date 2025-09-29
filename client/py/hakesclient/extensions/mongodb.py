@@ -94,7 +94,10 @@ class MongoDB(Store):
         """
         Destructor to ensure the MongoDB connection is closed when the object is deleted.
         """
-        self.disconnect()
+        try:
+            self.disconnect()
+        except Exception:
+            pass
 
     def _get_next_xids(self, batch_size: int) -> list[bytes]:
         # Atomically increment the counter by batch_size and get the starting value
