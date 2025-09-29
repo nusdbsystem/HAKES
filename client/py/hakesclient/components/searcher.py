@@ -16,6 +16,7 @@ import json
 import logging
 import numpy as np
 import requests
+from typing import List
 
 from ..message import (
     decode_search_worker_add_response,
@@ -35,14 +36,22 @@ from ..utils import validate_addr
 
 
 class Searcher:
-    def load_collection(self, addr: str, collection_name: str):
-        addr = validate_addr(addr)
+
+    def __init__(self, addrs: List[str]):
+        if len(addrs) > 1:
+            logging.warning(
+                f"Using distributed search worker with {len(addrs)} workers not supported yet"
+            )
+        validate_addr(addrs[0])
+        self.addr = addrs[0]
+
+    def load_collection(self, collection_name: str):
         data = encode_search_worker_load_collection_request(collection_name)
 
         try:
-            response = requests.post(addr + "/load", json=data)
+            response = requests.post(self.addr + "/load", json=data)
         except Exception as e:
-            logging.warning(f"search worker load collection failed on {addr}: {e}")
+            logging.warning(f"search worker load collection failed on {self.addr}: {e}")
             return None
 
         if response.status_code != 200:
@@ -53,14 +62,13 @@ class Searcher:
 
         return decode_search_worker_load_collection_response(json.loads(response.text))
 
-    def add(self, addr: str, collection_name: str, vecs: np.ndarray, ids: np.ndarray):
-        addr = validate_addr(addr)
+    def add(self, collection_name: str, vecs: np.ndarray, ids: np.ndarray):
         data = encode_search_worker_add_request(collection_name, vecs, ids)
 
         try:
-            response = requests.post(addr + "/add", json=data)
+            response = requests.post(self.addr + "/add", json=data)
         except Exception as e:
-            logging.warning(f"search worker add failed on {addr}: {e}")
+            logging.warning(f"search worker add failed on {self.addr}: {e}")
             return None
 
         if response.status_code != 200:
@@ -71,14 +79,13 @@ class Searcher:
 
         return decode_search_worker_add_response(json.loads(response.text))
 
-    def delete(self, addr: str, collection_name: str, ids: np.ndarray):
-        addr = validate_addr(addr)
+    def delete(self, collection_name: str, ids: np.ndarray):
         data = encode_search_worker_delete_request(collection_name, ids)
 
         try:
-            response = requests.post(addr + "/delete", json=data)
+            response = requests.post(self.addr + "/delete", json=data)
         except Exception as e:
-            logging.warning(f"search worker delete failed on {addr}: {e}")
+            logging.warning(f"search worker delete failed on {self.addr}: {e}")
             return None
 
         if response.status_code != 200:
@@ -91,7 +98,6 @@ class Searcher:
 
     def search(
         self,
-        addr: str,
         collection_name: str,
         query: np.ndarray,
         k: int,
@@ -99,7 +105,6 @@ class Searcher:
         k_factor: int,
         metric_type: str,
     ):
-        addr = validate_addr(addr)
         data = encode_search_worker_search_request(
             collection_name,
             k,
@@ -110,9 +115,9 @@ class Searcher:
         )
 
         try:
-            response = requests.post(addr + "/search", json=data)
+            response = requests.post(self.addr + "/search", json=data)
         except Exception as e:
-            logging.warning(f"search worker search failed on {addr}: {e}")
+            logging.warning(f"search worker search failed on {self.addr}: {e}")
             return None
 
         if response.status_code != 200:
@@ -127,14 +132,12 @@ class Searcher:
 
     def rerank(
         self,
-        addr: str,
         collection_name: str,
         query: np.ndarray,
         k: int,
         input_ids: np.ndarray,
         metric_type: str,
     ):
-        addr = validate_addr(addr)
         data = encode_search_worker_rerank_request(
             collection_name,
             k,
@@ -144,9 +147,9 @@ class Searcher:
         )
 
         try:
-            response = requests.post(addr + "/rerank", json=data)
+            response = requests.post(self.addr + "/rerank", json=data)
         except Exception as e:
-            logging.warning(f"search worker rerank failed on {addr}: {e}")
+            logging.warning(f"search worker rerank failed on {self.addr}: {e}")
             return None
 
         if response.status_code != 200:
@@ -157,14 +160,13 @@ class Searcher:
 
         return decode_search_worker_rerank_response(json.loads(response.text), k)
 
-    def checkpoint(self, addr: str, collection_name: str):
-        addr = validate_addr(addr)
+    def checkpoint(self, collection_name: str):
         data = encode_search_worker_checkpoint_request(collection_name)
 
         try:
-            response = requests.post(addr + "/checkpoint", json=data)
+            response = requests.post(self.addr + "/checkpoint", json=data)
         except Exception as e:
-            logging.warning(f"search worker load collection failed on {addr}: {e}")
+            logging.warning(f"search worker load collection failed on {self.addr}: {e}")
             return None
 
         if response.status_code != 200:
