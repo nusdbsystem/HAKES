@@ -81,6 +81,10 @@ src/openai_endpoint.o: $(HAKES_ROOT)/embed-endpoint/openai_endpoint.cpp
 src/huggingface_endpoint.o: $(HAKES_ROOT)/embed-endpoint/huggingface_endpoint.cpp
 	$(CXX) $(App_Cpp_Flags) -c $< -o $@
 	@echo "CXX <= $<"
+
+src/ollama_endpoint.o: $(HAKES_ROOT)/embed-endpoint/ollama_endpoint.cpp
+	$(CXX) $(App_Cpp_Flags) -c $< -o $@
+	@echo "CXX <= $<"
 ## embed endpoint
 
 src/%.o: src/%.cpp
@@ -104,7 +108,8 @@ Objects := src/workerimpl.o \
 # endpoint object files
 Objects += src/endpoint.o \
 	src/openai_endpoint.o \
-	src/huggingface_endpoint.o
+	src/huggingface_endpoint.o \
+	src/ollama_endpoint.o
 
 libhakes_worker.a: $(Objects)
 	ar -rcs $@ $^

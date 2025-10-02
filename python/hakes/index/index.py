@@ -1,13 +1,11 @@
 import logging
-import numpy as np
 import os
-import struct
 import torch
 from torch import nn
 import torch.nn.functional as F
 from typing import Type
 
-from .vt import HakesPreTransform, HakesVecTransform
+from .vt import HakesPreTransform
 from .ivf import HakesIVF
 from .pq import HakesPQ
 
@@ -47,7 +45,7 @@ class HakesIndex(nn.Module):
         if not os.path.exists(path):
             raise ValueError(f"Index file {path} does not exist")
         else:
-            logging.info(f"Loading from hakes index file")
+            logging.info("Loading from hakes index file")
             return HakesIndex.load_from_hakes_index(path, metric=metric)
 
     @classmethod
@@ -129,7 +127,7 @@ class HakesIndex(nn.Module):
             transformed_query_data = query_data
             transformed_pos_data = pos_data
 
-        print(
+        logging.info(
             f"transformed shape: {transformed_query_data.shape}, {transformed_pos_data.shape}"
         )
 
@@ -169,11 +167,11 @@ class HakesIndex(nn.Module):
                 )
         else:
             raise ValueError(f"Unknown loss method: {loss_method}")
-        print(
+        logging.info(
             f"pq query recons loss: {self.recons_loss(transformed_query_data, query_quantized)}"
         )
 
-        print(f"losses: {vt_loss}, {pq_loss}, {ivf_loss}, ")
+        logging.info(f"losses: {vt_loss}, {pq_loss}, {ivf_loss}, ")
 
         return vt_loss, pq_loss, ivf_loss
 
@@ -185,7 +183,7 @@ class HakesIndex(nn.Module):
         elif mode == "vt":
             transformed_query_data = self.vts(query_data)
             transformed_neighbor_data = self.vts(neighbor_data)
-            print(
+            logging.info(
                 f"transformed shape: {transformed_query_data.shape}, {transformed_neighbor_data.shape}"
             )
             # calculate distances
