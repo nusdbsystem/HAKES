@@ -84,6 +84,9 @@ int main(int argc, char* argv[]) {
       hakes::encode_search_worker_load_request(load_req);
   assert(worker.LoadCollection(encoded_load_req.c_str(), encoded_load_req.size(),
                                resp_load.get(), 4096 * 4096));
+  //  reloading shall be noop
+  assert(worker.LoadCollection(encoded_load_req.c_str(), encoded_load_req.size(),
+                               resp_load.get(), 4096 * 4096));
   std::cout << "Index loaded" << std::endl;
 
   // add vectors.

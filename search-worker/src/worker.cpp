@@ -114,6 +114,7 @@ bool WorkerImpl::LoadCollection(const char* req, size_t req_len, char* resp,
     load_resp.msg = "load error: " + load_resp.msg;
   } else {
     load_resp.status = true;
+    index = GetCollection(collection_name);
     load_resp.msg =
         "load success: " + collection_name + "{" + index->to_string() + "}";
   }
