@@ -19,10 +19,10 @@
 
 #include <memory>
 
-#include "search-worker/worker.h"
 #include "search-worker/index/Index.h"
 #include "search-worker/index/ext/HakesCollection.h"
 #include "search-worker/index/ext/IndexFlatL.h"
+#include "search-worker/worker.h"
 
 namespace search_worker {
 
@@ -34,11 +34,13 @@ class WorkerImpl : public Worker {
   bool Initialize(bool keep_pa, int cluster_size, int server_id,
                   const std::string& path) override;
 
+  bool Initialize(const std::string& path) override;
+
   bool IsInitialized() override;
 
   bool HasLoadedCollection(const std::string& collection_name) override;
 
-  faiss::HakesCollection* GetCollection(const std::string& collection_name);
+  bool ListCollections(char* resp, size_t resp_len) override;
 
   bool LoadCollection(const char* req, size_t req_len, char* resp,
                       size_t resp_len) override;
@@ -59,6 +61,35 @@ class WorkerImpl : public Worker {
                   size_t resp_len) override;
 
   bool Close() override;
+
+  faiss::HakesCollection* GetCollection(const std::string& collection_name);
+
+  std::vector<std::string> ListCollectionsInternal();
+
+  bool LoadCollectionInternal(const std::string& collection_name, int mode = 0);
+
+  bool AddWithIdsInternal(const std::string& collection_name, int n, int d,
+                          const float* vecs, const faiss::idx_t* ids,
+                          bool base_only, std::string* error_msg);
+
+  bool SearchInternal(const std::string& collection_name, int n, int d,
+                      const float* query,
+                      const faiss::HakesSearchParams& params,
+                      std::unique_ptr<float[]>* scores,
+                      std::unique_ptr<faiss::idx_t[]>* ids,
+                      std::string* error_msg);
+
+  bool RerankInternal(const std::string& collection_name, int n, int d,
+                      const float* query, int k, faiss::idx_t* k_base_count,
+                      faiss::idx_t* base_labels, float* base_distances,
+                      std::unique_ptr<float[]>* scores,
+                      std::unique_ptr<faiss::idx_t[]>* ids,
+                      std::string* error_msg);
+
+  //   bool DeleteInternal(const char* req, size_t req_len, char* resp,
+  //               size_t resp_len);
+
+  bool CheckpointInternal(const std::string& collection_name, std::string* error_msg);
 
  private:
   int cluster_size_;

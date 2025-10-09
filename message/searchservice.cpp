@@ -50,6 +50,27 @@ std::unique_ptr<int64_t[]> decode_hex_int64s(const std::string& vecs_str,
   return vecs;
 }
 
+std::string encode_search_worker_list_collections_response(
+  const SearchWorkerListCollectionsReseponse& response
+) {
+  json::JSON ret;
+  ret["collections"] = json::Array();
+  for (auto& c : response.collections) {
+    ret["collections"].append(std::move(c));
+  }
+  return ret.dump();
+}
+
+bool decode_search_worker_list_collections_response(const std::string& response_str,
+                                       SearchWorkerListCollectionsReseponse* response) {
+  auto input = json::JSON::Load(response_str);
+  response->collections.clear();
+  for (auto& c : input["collections"].ArrayRange()) {
+    response->collections.emplace_back(c.ToString());
+  }
+  return true;
+}
+
 std::string encode_search_worker_load_request(
     const SearchWorkerLoadRequest& request) {
   json::JSON ret;
