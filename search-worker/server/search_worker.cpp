@@ -64,6 +64,10 @@ bool SearchWorker::Handle(const std::string& url, const std::string& input,
         worker_->Rerank(input.c_str(), input.size(), buf.get(), kMaxRespLen);
     output->assign(&buf[0]);
     return success;
+  } else if (url == "/list") {
+    auto success = worker_->ListCollections(buf.get(), kMaxRespLen);
+    output->assign(&buf[0]);
+    return success;
   } else if (url == "/load") {
     auto success = worker_->LoadCollection(input.c_str(), input.size(),
                                            buf.get(), kMaxRespLen);

@@ -31,10 +31,15 @@ class Worker {
   virtual bool Initialize(bool keep_pa, int cluster_size, int server_id,
                           const std::string& path) = 0;
 
+  // embedded
+  virtual bool Initialize(const std::string& path) = 0;
+
   // the worker shall be pre-initialized before installing to a search worker
   virtual bool IsInitialized() = 0;
 
   virtual bool HasLoadedCollection(const std::string& collection_name) = 0;
+
+  virtual bool ListCollections(char* resp, size_t resp_len) = 0;
 
   virtual bool LoadCollection(const char* req, size_t req_len, char* resp,
                               size_t resp_len) = 0;

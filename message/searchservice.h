@@ -19,6 +19,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace hakes {
 
@@ -29,6 +30,16 @@ std::unique_ptr<float[]> decode_hex_floats(const std::string& vecs_str,
 std::string encode_hex_int64s(const int64_t* vecs, size_t count);
 std::unique_ptr<int64_t[]> decode_hex_int64s(const std::string& vecs_str,
                                              size_t* count);
+
+struct SearchWorkerListCollectionsReseponse {
+  std::vector<std::string> collections;
+};
+
+std::string encode_search_worker_list_collections_response(
+    const SearchWorkerListCollectionsReseponse& response);
+
+bool decode_search_worker_list_collections_response(const std::string& response_str,
+                                        SearchWorkerListCollectionsReseponse* response);
 
 struct SearchWorkerLoadRequest {
   std::string collection_name;
