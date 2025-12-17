@@ -19,7 +19,8 @@ import requests
 from typing import List
 
 from ..message import (
-    decode_search_worker_add_response,
+    encode_search_worker_list_collection_request,
+    decode_search_worker_list_collection_response,    decode_search_worker_add_response,
     decode_search_worker_rerank_response,
     decode_search_worker_search_response,
     decode_search_worker_load_collection_response,
@@ -44,6 +45,23 @@ class Searcher:
             )
         validate_addr(addrs[0])
         self.addr = addrs[0]
+
+    def list_collections(self):
+        data = encode_search_worker_list_collection_request()
+
+        try:
+            response = requests.post(self.addr + "/list", json=data)
+        except Exception as e:
+            logging.warning(f"search worker list collection failed on {self.addr}: {e}")
+            return None
+
+        if response.status_code != 200:
+            logging.warning(
+                f"Failed to call search worker, status code: {response.status_code} {response.text}"
+            )
+            return None
+
+        return decode_search_worker_list_collection_response(json.loads(response.text))
 
     def load_collection(self, collection_name: str):
         data = encode_search_worker_load_collection_request(collection_name)

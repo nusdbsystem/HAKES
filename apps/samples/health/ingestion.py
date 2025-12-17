@@ -7,6 +7,10 @@ launch the search worker and the store for data insertion
 
 docker run --name search-worker-test -p 2053:8080 -v ./collections:/mounted_store/index hakes-searchworker:v1
 docker run -d -p 27017:27017 --name mongo-test mongo
+
+# embedder
+docker run -d --name hakes-ollama-embedder -p 2054:11434 ollama/ollama
+docker exec -it hakes-ollama-embedder ollama pull nomic-embed-text
 """
 
 # Initialize and configure HAKES client
@@ -19,9 +23,9 @@ from hakesclient.extensions.ollama import OllamaEmbedder
 
 COLLECTION_NAME = "pubmedqa"
 
-store: Store = MongoDB("mongodb://localhost:27017", "collections", COLLECTION_NAME)
+store: Store = MongoDB("mongodb://localhost:2052", "collections", COLLECTION_NAME)
 embedder: Embedder = OllamaEmbedder(
-    base_url="http://localhost:11500", model="nomic-embed-text"
+    base_url="http://localhost:2054", model="nomic-embed-text"
 )
 searcher: Searcher = Searcher(["http://localhost:2053"])
 client: Client = Client(
@@ -60,3 +64,5 @@ for i in range(len(processed_data["train"])):
 # %%
 # checkpoint
 client.checkpoint(COLLECTION_NAME)
+
+# %%

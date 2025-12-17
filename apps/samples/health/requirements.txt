@@ -4,3 +4,4 @@ datasets==4.1.1
 fastapi==0.118.0
 uvicorn==0.37.0
 sentence_transformers==5.1.1
+einops==0.8.1

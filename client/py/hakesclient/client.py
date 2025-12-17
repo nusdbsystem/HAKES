@@ -32,6 +32,12 @@ class Client:
         self.pool = ThreadPoolExecutor(max_workers=1000)
         self.searcher = searcher
 
+    def list_collections(self):
+        """
+        List collections in the distributed HakesService V3
+        """
+        return self.searcher.list_collections()
+
     def load_collection(self, collection_name: str):
         """
         Load a collection to the distributed HakesService V3

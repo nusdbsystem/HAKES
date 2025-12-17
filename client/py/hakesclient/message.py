@@ -21,6 +21,22 @@ import numpy as np
 from typing import Dict
 
 
+def encode_search_worker_list_collection_request(
+    user_id: str = "",
+    ks_addr: str = "",
+    ks_port: int = -1,
+):
+    data = {
+        "user_id": user_id,
+        "ks_addr": ks_addr,
+        "ks_port": ks_port,
+    }
+    return data
+
+
+def decode_search_worker_list_collection_response(resp: Dict) -> Dict:
+    return resp
+
 def encode_search_worker_load_collection_request(
     collection_name: str,
     user_id: str = "",

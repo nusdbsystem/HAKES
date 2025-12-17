@@ -2,7 +2,7 @@ import os
 import sys
 from dotenv import load_dotenv
 
-load_dotenv("/run/secrets/env_secret")
+load_dotenv("/users/yc/.secrets/env_secret")
 sys.path.append("../..")
 
 from hakesclient import Client, DataType
@@ -51,7 +51,7 @@ service = None
 
 @app.get("/datasets/list")
 def list_datasets():
-    pass
+    return service.client.list_collections()
 
 
 @app.post("/chat")
@@ -93,7 +93,7 @@ def parse_args():
     parser.add_argument(
         "--embedder_url",
         type=str,
-        default="http://localhost:11434",
+        default="http://localhost:2054",
         help="Address of the embedder",
     )
     parser.add_argument(
@@ -105,7 +105,7 @@ def parse_args():
     parser.add_argument(
         "--store_url",
         type=str,
-        default="mongodb://localhost:27017",
+        default="mongodb://localhost:2052",
         help="Path to the MongoDB database",
     )
     args = parser.parse_args()
@@ -121,6 +121,6 @@ if __name__ == "__main__":
     args = parse_args()
     service = Service(args.embedder_url, args.searcher_url, args.store_url)
 
-    uvicorn.run(app, host="0.0.0.0", port=2033)
+    uvicorn.run(app, host="0.0.0.0", port=4033)
 
 # curl -X POST http://localhost:2033/chat -H "Content-Type: application/json" -d '{"question": "What are group 2 innate lymphoid cells?"}'
