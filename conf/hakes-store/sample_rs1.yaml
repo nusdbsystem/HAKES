@@ -1,0 +1,8 @@
+root: /rgs
+region: /regionA
+zk:
+  - "192.168.1.100:2181"
+# its own address
+addr: "192.168.1.100"
+port: 2501
+http_port: 2601

@@ -1,0 +1,84 @@
+diff --git a/include/tvm/runtime/crt/packed_func.h b/include/tvm/runtime/crt/packed_func.h
+index 83d961b..2e4d3ab 100644
+--- a/include/tvm/runtime/crt/packed_func.h
++++ b/include/tvm/runtime/crt/packed_func.h
+@@ -72,7 +72,7 @@ inline TVMModuleHandle TVMArgs_AsModuleHandle(const TVMArgs* args, size_t index)
+   return args->values[index].v_handle;
+ }
+ 
+-extern TVMPackedFunc* g_fexecs;
+-extern uint32_t g_fexecs_count;
++extern __thread TVMPackedFunc* g_fexecs;
++extern __thread uint32_t g_fexecs_count;
+ 
+ #endif  // TVM_RUNTIME_CRT_PACKED_FUNC_H_
+diff --git a/src/runtime/crt/common/crt_runtime_api.c b/src/runtime/crt/common/crt_runtime_api.c
+index 666b135..da00dc2 100644
+--- a/src/runtime/crt/common/crt_runtime_api.c
++++ b/src/runtime/crt/common/crt_runtime_api.c
+@@ -41,7 +41,7 @@
+ 
+ // Handle internal errors
+ 
+-static char g_last_error[1024];
++static __thread char g_last_error[1024];
+ 
+ void TVMAPISetLastError(const char* msg) {
+   strncpy(g_last_error, msg, sizeof(g_last_error) - 1);
+@@ -144,19 +144,19 @@ int TVMSetStream(int device_type, int device_id, TVMStreamHandle stream) { retur
+ 
+ int TVMSynchronize(int device_type, int device_id, TVMStreamHandle stream) { return 0; }
+ 
+-static TVMMutableFuncRegistry global_func_registry;
++static __thread TVMMutableFuncRegistry global_func_registry;
+ 
+ int TVMFuncRegisterGlobal(const char* name, TVMFunctionHandle f, int override) {
+   return TVMMutableFuncRegistry_Set(&global_func_registry, name, f, override != 0);
+ }
+ 
+-static const TVMModule* registered_modules[TVM_CRT_MAX_REGISTERED_MODULES];
++static __thread const TVMModule* registered_modules[TVM_CRT_MAX_REGISTERED_MODULES];
+ 
+ /*! \brief Passed as `module_index` to EncodeFunctionHandle. */
+-static const tvm_module_index_t kGlobalFuncModuleIndex = TVM_CRT_MAX_REGISTERED_MODULES;
++static __thread const tvm_module_index_t kGlobalFuncModuleIndex = TVM_CRT_MAX_REGISTERED_MODULES;
+ 
+ /*! \brief Special module handle for return values from RPCTimeEvaluator. */
+-static const tvm_module_index_t kTimeEvaluatorModuleIndex = 0x7fff;
++static __thread const tvm_module_index_t kTimeEvaluatorModuleIndex = 0x7fff;
+ 
+ static int DecodeModuleHandle(TVMModuleHandle handle, tvm_module_index_t* out_module_index) {
+   tvm_module_index_t module_index;
+@@ -189,9 +189,9 @@ int TVMModCreateFromCModule(const TVMModule* mod, TVMModuleHandle* out_handle) {
+   return -1;
+ }
+ 
+-static const TVMModuleHandle kTVMModuleHandleUninitialized = (TVMModuleHandle)(~0UL);
++static __thread const TVMModuleHandle kTVMModuleHandleUninitialized = (TVMModuleHandle)(~0UL);
+ 
+-static TVMModuleHandle system_lib_handle;
++static __thread TVMModuleHandle system_lib_handle;
+ 
+ int TVMModFree(TVMModuleHandle mod) {
+   /* Never free system_lib_handler */
+@@ -481,7 +481,7 @@ typedef struct {
+   int repeats_to_cooldown;
+ } time_evaluator_state_t;
+ 
+-static time_evaluator_state_t g_time_evaluator_state;
++static __thread time_evaluator_state_t g_time_evaluator_state;
+ 
+ int RPCTimeEvaluator(TVMValue* args, int* type_codes, int num_args, TVMValue* ret_val,
+                      int* ret_type_code) {
+diff --git a/src/runtime/crt/common/packed_func.c b/src/runtime/crt/common/packed_func.c
+index b9d3760..6a65a48 100644
+--- a/src/runtime/crt/common/packed_func.c
++++ b/src/runtime/crt/common/packed_func.c
+@@ -134,5 +134,5 @@ void TVMPackedFunc_SetArgs(TVMPackedFunc* pf, const TVMArgs* args) {
+   memcpy(&(pf->args), args, sizeof(TVMArgs));
+ }
+ 
+-TVMPackedFunc* g_fexecs;
+-uint32_t g_fexecs_count;
++__thread TVMPackedFunc* g_fexecs;
++__thread uint32_t g_fexecs_count;

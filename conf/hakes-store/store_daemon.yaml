@@ -1,0 +1,29 @@
+# sample config file for store-daemon
+
+id: nd0
+# net-name: eth0
+net-name: eno1
+net-bandwidth: 10240
+# PrefetchMode: Sync/Async/None
+prefetch-mode: Sync
+prefetch-size: 2048
+css-config:
+  # local/s3
+  type: local
+  # path to load sst files (not used.)
+  # store-daemon receive the path from hakes-store so for shared fs.
+  # make sure fs is mounted with the same path and abs path provided.
+  path: test/hakes-store-test-sst
+sstcache-config:
+  # local/remote
+  type: local
+  capacity: 2048
+  css-config:
+    type: local
+    path: hakes-store-sc
+store-daemon-peers:
+  - 192.168.1.103:2221
+reserved: 0.2
+local-threshold: 0.5
+lambda-compactor: hakes-store-comp
+num-compactor: 32

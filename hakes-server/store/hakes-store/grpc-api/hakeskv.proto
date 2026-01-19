@@ -1,0 +1,79 @@
+/*
+ * Copyright 2024 The HAKES Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+option go_package = "hakes-store/grpc_api";
+
+package hakes_store;
+
+service HakesKV {
+  rpc Get(GetRequest) returns (GetReply) {}
+  rpc Put(PutRequest) returns (PutReply) {}
+  rpc Del(DelRequest) returns (DelReply) {}
+  rpc Scan(ScanRequest) returns (ScanReply) {}
+}
+
+message GetRequest {
+  bytes key = 1;
+}
+
+message GetReply {
+  bool success = 1;
+  bool found = 2;
+  bytes val = 3;
+  string errMsg = 4;
+}
+
+message PutRequest {
+  bytes key = 1;
+  bytes val = 2;
+}
+
+message PutReply {
+  bool success = 1;
+  string errMsg = 2;
+}
+
+message DelRequest {
+  bytes key = 1;
+}
+
+message DelReply {
+  bool success = 1;
+  string errMsg = 2;
+}
+
+enum ScanType {
+  FIXEDCOUNT = 0;
+  ENDKEY = 1;
+  FULL = 2;
+}
+
+message ScanRequest {
+  ScanType type = 1;
+  uint32 count = 2;
+  bytes startKey = 3;
+  bytes endKey = 4;
+}
+
+message ScanReply {
+  bool success = 1;
+  uint32 count = 2;
+  repeated bytes keySet = 3;
+  repeated bytes valSet = 4;
+  string errMsg = 5;
+}

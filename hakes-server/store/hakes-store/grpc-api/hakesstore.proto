@@ -1,0 +1,178 @@
+/*
+ * Copyright 2024 The HAKES Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+option go_package = "hakes-store/grpc_api";
+
+package hakes_store;
+
+service HakesStoreKVR {
+  // external service api
+  rpc Get (HakesStoreGetRequest) returns (HakesStoreGetReply) {}
+  rpc Put (HakesStorePutRequest) returns (HakesStorePutReply) {}
+  rpc Del (HakesStoreDelRequest) returns (HakesStoreDelReply) {}
+  rpc Scan (HakesStoreScanRequest) returns (HakesStoreScanReply) {}
+  // put key send the log bytes and the log meta
+  // log service
+  rpc InOpenLog (InOpenLogRequest) returns (InOpenLogReply) {}
+  rpc InAppendLog (InAppendLogRequest) returns (InAppendLogReply) {}
+  rpc InDropLog (InDropLogRequest) returns (InDropLogReply) {}
+  // manifest service
+  rpc InUpdateManifest (InUpdateManifestRequest) returns (InUpdateManifestReply) {}
+  // used for synchronization
+  rpc InGetSnapshot(InSnapshotRequest) returns (InSnapshotReply) {}
+  rpc InFlushSync(InFlushRequest) returns (InFlushReply) {}
+}
+
+message HakesStoreGetRequest {
+  bytes key = 1;
+}
+
+message HakesStoreGetReply {
+  bool success = 1;
+  bool found = 2;
+  bytes val = 3;
+  string errMsg = 4;
+}
+
+message HakesStorePutRequest {
+  bytes key = 1;
+  bytes val = 2;
+}
+
+message HakesStorePutReply {
+  bool success = 1;
+  string errMsg = 2;
+}
+
+message HakesStoreDelRequest {
+  bytes key = 1;
+}
+
+message HakesStoreDelReply {
+  bool success = 1;
+  string errMsg = 2;
+}
+
+enum HakesStoreScanType {
+  FIXEDCOUNTSCAN = 0;
+  ENDKEYSCAN = 1;
+  FULLSCAN = 2;
+}
+
+message HakesStoreScanRequest{
+  HakesStoreScanType type = 1;
+  uint32 count = 2;
+  bytes startKey = 3;
+  bytes endKey = 4;
+}
+
+message HakesStoreScanReply {
+  bool success = 1;
+  uint32 count = 2;
+  repeated bytes keySet = 3;
+  repeated bytes valSet = 4;
+  string errMsg = 5;
+}
+
+message InOpenLogRequest {
+  string logName = 1;
+  uint32 maxSz = 2;
+}
+
+message InOpenLogReply {
+  bool success = 1;
+  string msg = 2;
+}
+
+message InAppendLogRequest {
+  string logName = 1;
+  uint32 offset = 2;
+  bytes data = 3;
+}
+
+message LogDataRequest {
+  string logName = 1;
+  uint32 startOff = 2;
+  uint32 endOff = 3;
+}
+
+message InAppendLogReply {
+  bool success = 1;
+  bool haveReq = 2;
+  LogDataRequest req = 3;
+}
+
+message InDropLogRequest {
+  string logName = 1;
+}
+
+message InDropLogReply {
+  bool success = 1;
+  string msg = 2;
+}
+
+message InUpdateManifestRequest {
+  uint32 manifestId = 1;
+  bytes data = 2;
+}
+
+message InUpdateManifestReply {
+  bool success = 1;
+  string msg= 2;
+}
+
+message LogDiff {
+  string logName = 1;
+  bool dropped = 2;
+  uint32 startOff = 3;
+  uint32 endOff = 4;
+  uint32 capacity = 5;
+  bytes data = 6;
+}
+
+message InSnapshotRequest {
+  uint32 manifestId = 1;
+  bool requireData = 2;
+  string lastLogName = 3;
+  bool lastLogDropped = 4;
+  uint32 lastLogTail = 5;
+}
+
+// if the log data out-of-sync is high, then each reply can contain a subset of data in missLogBytes,
+// upon receiving the missing log bytes, the leader can judge if he should ask for more by sending GetSnapshot with a more recent tail again
+message InSnapshotReply {
+  bool success = 1;
+  // return the callee snapshot/state summary
+  uint32 manifestId = 2;
+  string lastLogName = 3;
+  bool lastLogDropped = 4;
+  uint32 lastLogTail = 5;
+  // if there is mismatch from caller, caller return these data
+  // should be small
+  bytes manifestBytes = 6;
+  repeated LogDiff logdiffs = 7;
+}
+
+message InFlushRequest {
+  string logName = 1; // the id of log that needs to be flushed for the caller to consider sync.
+}
+
+message InFlushReply{
+  bool success = 1;
+  string msg = 2;
+}

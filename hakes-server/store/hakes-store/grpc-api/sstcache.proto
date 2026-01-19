@@ -1,0 +1,67 @@
+/*
+ * Copyright 2024 The HAKES Authors
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+option go_package = "hakes-store/grpc_api";
+
+package hakes_store;
+
+service SstCacheSvc {
+  rpc SstCacheReserve (SstCacheReserveRequest) returns (SstCacheReserveReply) {}  
+  rpc SstCacheRelease (SstCacheReleaseRequest) returns (SstCacheReleaseReply) {}
+  rpc SstCacheAdd (SstCacheAddRequest) returns (SstCacheAddReply) {}  
+  rpc SstCacheDrop (SstCacheDropRequest) returns (SstCacheDropReply) {}
+}
+
+
+message SstCacheReserveRequest {
+  uint32 charge = 1;
+}
+
+message SstCacheReserveReply {
+  bool success = 1;
+  string msg = 2;
+}
+
+message SstCacheReleaseRequest {
+  uint32 charge = 1;
+}
+
+message SstCacheReleaseReply {
+  bool success = 1;
+  string msg = 2;
+}
+
+message SstCacheAddRequest {
+  string path = 1;
+  uint32 charge = 2;
+}
+
+message SstCacheDropRequest {
+  string path = 1;
+  uint32 charge = 2;
+}
+
+message SstCacheAddReply {
+  bool success = 1;
+  string msg = 2;
+}
+
+message SstCacheDropReply {
+  bool success = 1;
+  string msg = 2;
+}
