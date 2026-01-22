@@ -21,6 +21,8 @@
 #include "hakes-worker/data_manager.h"
 #include "hakes-worker/worker.h"
 #include "utils/http.h"
+#include "utils/json.h"
+#include "utils/base64.h"
 
 namespace hakes_worker {
 
@@ -39,15 +41,39 @@ class WorkerImpl : public Worker {
 
   bool Initialize() override;
 
-  bool HandleKvOp(uint64_t handle_id, const std::string& sample_request,
-                  std::string* output) override;
+  bool HandleLogin(uint64_t handle_id, const std::string& input,
+                   std::string* output) override;
 
-  bool HandleSearchOp(uint64_t handle_id, const std::string& sample_request,
-                      std::string* output) override;
+  bool HandleLogout(uint64_t handle_id, const std::string& input,
+                    std::string* output) override;
+
+  bool HandleListCollections(uint64_t handle_id, const std::string& input,
+                             std::string* output) override;
+
+  bool HandleLoadCollection(uint64_t handle_id, const std::string& input,
+                            std::string* output) override;
+
+  bool HandleCheckpoint(uint64_t handle_id, const std::string& input,
+                        std::string* output) override;
+
+  bool HandleAdd(uint64_t handle_id, const std::string& input,
+                 std::string* output) override;
+
+  bool HandleSearch(uint64_t handle_id, const std::string& input,
+                    std::string* output) override;
+
+  bool HandleDelete(uint64_t handle_id, const std::string& input,
+                    std::string* output) override;
+
+  bool HandleRerank(uint64_t handle_id, const std::string& input,
+                    std::string* output) override;
 
   void Close() override;
 
  private:
+  bool ValidateToken(const std::string& token, std::string* user_id, std::string* roles);
+  bool ValidateRequestToken(json::JSON json_input, std::string* user_id, std::string* roles, std::string* output);
+  
   HakesWorkerConfig config_;
   hakes::HttpClient http_;
   hakes::MultiHttpClient multi_http_;

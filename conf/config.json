@@ -1,0 +1,12 @@
+{
+  "hakes_addr": "127.0.0.1:26000",
+  "embed_endpoint_type": "hakes-embed",
+  "embed_endpoint_config": "",
+  "embed_endpoint_addr": "127.0.0.1:26030",
+  "search_worker_addrs": [
+    "127.0.0.1:26010"
+  ],
+  "preferred_search_worker": 0,
+  "store_type": "hakes-store",
+  "store_addr": "127.0.0.1:26020"
+}

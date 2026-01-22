@@ -19,7 +19,9 @@
 #include <cassert>
 #include <chrono>
 #include <cstring>
+#include <sstream>
 
+#include "utils/json.h"
 #include "utils/ow_message.h"
 
 namespace hakes_worker {
@@ -57,18 +59,29 @@ bool HakesWorker::Handle(const std::string& url, const std::string& input,
 
   bool success = false;
 
-  if (url == "/kv") {
-    success = worker_->HandleKvOp(0, std::move(req), output);
-    if (is_ow_action_) {
-      output->assign(
-          ow_message::package_ow_response(!success, std::move(*output), true));
-    }
+  // Handle authentication endpoints
+  if (url == "/login") {
+    success = worker_->HandleLogin(0, req, output);
+  } else if (url == "/logout") {
+    success = worker_->HandleLogout(0, req, output);
+  } 
+  // Handle collection management endpoints
+  else if (url == "/list") {
+    success = worker_->HandleListCollections(0, req, output);
+  } else if (url == "/load") {
+    success = worker_->HandleLoadCollection(0, req, output);
+  } else if (url == "/checkpoint") {
+    success = worker_->HandleCheckpoint(0, req, output);
+  }
+  // Handle data operations
+  else if (url == "/add") {
+    success = worker_->HandleAdd(0, req, output);
   } else if (url == "/search") {
-    success = worker_->HandleSearchOp(0, std::move(req), output);
-    if (is_ow_action_) {
-      output->assign(
-          ow_message::package_ow_response(!success, std::move(*output), true));
-    }
+    success = worker_->HandleSearch(0, req, output);
+  } else if (url == "/delete") {
+    success = worker_->HandleDelete(0, req, output);
+  } else if (url == "/rerank") {
+    success = worker_->HandleRerank(0, req, output);
   }
   auto end_time = std::chrono::high_resolution_clock::now();
   printf("HakesWorker::Handle finished at %ld\n",

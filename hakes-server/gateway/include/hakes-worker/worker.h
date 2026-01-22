@@ -35,12 +35,32 @@ class Worker {
 
   virtual bool Initialize() = 0;
 
-  virtual bool HandleKvOp(uint64_t handle_id, const std::string& sample_request,
-                          std::string* output) = 0;
+  virtual bool HandleLogin(uint64_t handle_id, const std::string& input,
+                           std::string* output) = 0;
 
-  virtual bool HandleSearchOp(uint64_t handle_id,
-                              const std::string& sample_request,
-                              std::string* output) = 0;
+  virtual bool HandleLogout(uint64_t handle_id, const std::string& input,
+                            std::string* output) = 0;
+
+  virtual bool HandleListCollections(uint64_t handle_id, const std::string& input,
+                                     std::string* output) = 0;
+
+  virtual bool HandleLoadCollection(uint64_t handle_id, const std::string& input,
+                                    std::string* output) = 0;
+
+  virtual bool HandleCheckpoint(uint64_t handle_id, const std::string& input,
+                                std::string* output) = 0;
+
+  virtual bool HandleAdd(uint64_t handle_id, const std::string& input,
+                         std::string* output) = 0;
+
+  virtual bool HandleSearch(uint64_t handle_id, const std::string& input,
+                            std::string* output) = 0;
+
+  virtual bool HandleDelete(uint64_t handle_id, const std::string& input,
+                            std::string* output) = 0;
+
+  virtual bool HandleRerank(uint64_t handle_id, const std::string& input,
+                            std::string* output) = 0;
 
   virtual void Close() = 0;
 };
