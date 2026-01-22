@@ -42,7 +42,6 @@ venv
 # build
 install
 build
-deps
 app
 app3
 embed_server

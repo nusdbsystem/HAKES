@@ -1,0 +1,7 @@
+/bazel-*
+*.swp
+.vscode/
+*audio_frontend*
+*google*
+*__pycache__*
+venv
