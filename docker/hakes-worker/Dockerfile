@@ -6,14 +6,9 @@ USER root
 RUN apt-get update && apt-get install -y libssl-dev libcurl4-openssl-dev
 
 COPY --from=hakes_base:v1 /hakes-es/deps /hakes-es/deps
-COPY ./hakes-worker/ /hakes-es/hakes-worker
-COPY ./embed-endpoint/ /hakes-es/embed-endpoint
-COPY ./message/ /hakes-es/message
-COPY ./server/ /hakes-es/server
-COPY ./store-client/ /hakes-es/store-client
-COPY ./utils/ /hakes-es/utils
+COPY ./hakes-server /hakes-es/hakes-server
 
-RUN cd /hakes-es/hakes-worker \
+RUN cd /hakes-es/hakes-server/gateway \
   && make mrproper && make all && make install && cd ..
 
 # image
@@ -28,7 +23,7 @@ ENV UV_THREADPOOL_SIZE ${UV_THREADPOOL_SIZE}
 
 RUN apt-get update && apt-get install -y curl
 
-COPY --from=hakes_worker_builder /hakes-es/hakes-worker/install /install
+COPY --from=hakes_worker_builder /hakes-es/hakes-server/gateway/install /install
 
 # default ow action so last argument 1
-CMD ["/install/bin/hakes_server", "8080", "/mounted_store/config", "1" ]
+CMD ["/install/bin/hakes_server", "8080", "/mounted_store/config", "0" ]
