@@ -17,25 +17,22 @@
 #ifndef HAKES_STORE_MONGODB_H_
 #define HAKES_STORE_MONGODB_H_
 
-#include "../store.h"
-#include <memory>
-#include <cstdint>
-#include <vector>
-#include <string>
-#include <map>
-
-// MongoDB C++ driver headers
-#include <mongocxx/client.hpp>
-#include <mongocxx/database.hpp>
-#include <mongocxx/collection.hpp>
 #include <bsoncxx/document/view.hpp>
-#include <bsoncxx/document/value.hpp>
+#include <cstdint>
+#include <memory>
+#include <mongocxx/client.hpp>
+#include <mongocxx/collection.hpp>
+#include <mongocxx/database.hpp>
+#include <string>
+#include <vector>
 
-namespace hakes {
+#include "store.h"
+
+namespace hakes_worker {
 
 /**
  * @brief MongoDB implementation of the Store interface.
- * 
+ *
  * This class provides MongoDB-specific functionality for storing and retrieving
  * key-value pairs with optional external IDs.
  */
@@ -43,15 +40,15 @@ class MongoDB : public Store {
  public:
   /**
    * @brief Constructor for MongoDB store.
-   * 
-   * @param addr The address of the MongoDB server (e.g., "mongodb://localhost:27017").
+   *
+   * @param addr The address of the MongoDB server (e.g.,
+   * "mongodb://localhost:27017").
    * @param db_name The database name (default: "hakes").
    * @param collection_name The collection name (default: "default").
-   * 
+   *
    * @throws std::runtime_error If MongoDB connection fails.
    */
-  MongoDB(const std::string& addr,
-          const std::string& db_name = "hakes",
+  MongoDB(const std::string& addr, const std::string& db_name = "hakes",
           const std::string& collection_name = "default");
 
   /**
@@ -61,7 +58,7 @@ class MongoDB : public Store {
 
   /**
    * @brief Check if connected to MongoDB.
-   * 
+   *
    * @return true if connected, false otherwise.
    */
   bool Connected() override;
@@ -78,13 +75,14 @@ class MongoDB : public Store {
 
   /**
    * @brief Put key-value pairs into MongoDB.
-   * 
-   * Auto-increments xid if not provided. Always stores xids as 8-byte (64-bit signed) values.
-   * 
+   *
+   * Auto-increments xid if not provided. Always stores xids as 8-byte (64-bit
+   * signed) values.
+   *
    * @param keys A vector of keys to associate with the values.
    * @param values A vector of values to store.
    * @param xids Optional vector of external IDs. If nullptr, auto-increments.
-   * 
+   *
    * @return A pair containing:
    *         - bool: true if successful, false otherwise
    *         - std::vector<std::string>: IDs that were successfully stored
@@ -96,24 +94,26 @@ class MongoDB : public Store {
 
   /**
    * @brief Get values and xids by a list of keys.
-   * 
+   *
    * @param keys A vector of keys to retrieve.
-   * 
+   *
    * @return A pair containing:
-   *         - std::vector<std::vector<uint8_t>>: values in the same order as input keys
-   *         - std::vector<std::vector<uint8_t>>: xids in the same order as input keys
-   *         If a key is missing, returns empty vector for value and xid.
+   *         - std::vector<std::vector<uint8_t>>: values in the same order as
+   * input keys
+   *         - std::vector<std::vector<uint8_t>>: xids in the same order as
+   * input keys If a key is missing, returns empty vector for value and xid.
    */
-  std::pair<std::vector<std::vector<uint8_t>>, std::vector<std::vector<uint8_t>>> 
+  std::pair<std::vector<std::vector<uint8_t>>,
+            std::vector<std::vector<uint8_t>>>
   GetByKeys(const std::vector<std::string>& keys) override;
 
   /**
    * @brief Get values by a list of external IDs.
-   * 
+   *
    * Preserves the order of input xids in the output.
-   * 
+   *
    * @param xids A vector of external IDs to retrieve.
-   * 
+   *
    * @return A vector of values in the same order as input xids.
    *         If an ID is missing, returns empty vector for that value.
    */
@@ -122,9 +122,9 @@ class MongoDB : public Store {
 
   /**
    * @brief Delete a key-value pair from MongoDB.
-   * 
+   *
    * @param key The key to delete.
-   * 
+   *
    * @return true if successful, false otherwise.
    */
   bool Delete(const std::string& key) override;
@@ -132,19 +132,19 @@ class MongoDB : public Store {
  private:
   /**
    * @brief Validate and format the MongoDB address.
-   * 
+   *
    * @param addr The address to validate.
    * @return The validated and formatted MongoDB address.
-   * 
+   *
    * @throws std::invalid_argument If the address is empty or invalid.
    */
   static std::string ValidateMongoDBAddress(const std::string& addr);
 
   /**
    * @brief Get the next batch of auto-incremented xids.
-   * 
+   *
    * XIDs are always 8-byte (64-bit signed) values.
-   * 
+   *
    * @param batch_size The number of IDs to generate.
    * @return A vector of generated xids in big-endian format.
    */
@@ -152,7 +152,7 @@ class MongoDB : public Store {
 
   /**
    * @brief Extract value from MongoDB document.
-   * 
+   *
    * @param doc The MongoDB document.
    * @return The value as a vector of uint8_t, or empty vector if not found.
    */
@@ -161,7 +161,7 @@ class MongoDB : public Store {
 
   /**
    * @brief Extract xid from MongoDB document.
-   * 
+   *
    * @param doc The MongoDB document.
    * @return The xid as a vector of uint8_t, or empty vector if not found.
    */
@@ -175,6 +175,6 @@ class MongoDB : public Store {
   std::string counter_key_;
 };
 
-}  // namespace hakes
+}  // namespace hakes_worker
 
 #endif  // HAKES_STORE_MONGODB_H_

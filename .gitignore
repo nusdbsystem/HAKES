@@ -37,7 +37,7 @@
 __pycache__
 *.egg
 *.egg-info
-venv
+*venv
 
 # build
 install

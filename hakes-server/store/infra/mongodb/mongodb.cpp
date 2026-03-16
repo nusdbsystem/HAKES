@@ -28,7 +28,7 @@
 #include <cstring>
 #include <cstdint>
 
-namespace hakes {
+namespace hakes_worker {
 
 using bsoncxx::builder::stream::document;
 using bsoncxx::builder::stream::array;

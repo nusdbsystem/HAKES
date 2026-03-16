@@ -174,6 +174,7 @@ bool WorkerImpl::HandleLogin(uint64_t handle_id, const std::string& input,
     }
     std::string username = json_input["username"].ToString();
     std::string password = json_input["password"].ToString();
+    std::cout << "Login attempt for user: " << username << ", password: " << password << "\n";
 
     // TODO: Get user from store and validate password
     // For now, accept any username/password and return mock data
@@ -185,6 +186,7 @@ bool WorkerImpl::HandleLogin(uint64_t handle_id, const std::string& input,
                     3600;  // 1 hour
 
     std::string token = create_jwt_token(user_id, roles, exp);
+    std::cout << "Generated token for user " << username << ": " << token << "\n";
 
     json::JSON response = json::Object();
     response["access_token"] = token;

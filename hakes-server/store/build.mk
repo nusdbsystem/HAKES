@@ -50,7 +50,7 @@ Store_Link_Flags = $(MONGOCXX_LIBS) $(BSONCXX_LIBS) $(MONGOC_LIBS) $(BSON_LIBS) 
 all: libhakes_store.a
 
 # MongoDB store implementation
-build/mongodb.o: mongodb/mongodb.cpp mongodb/mongodb.h store.h
+build/mongodb.o: infra/mongodb/mongodb.cpp infra/mongodb/mongodb.h repo/store.h
 	@mkdir -p build
 	$(CXX) $(Store_Cpp_Flags) -c $< -o $@
 	@echo "CXX <= $<"

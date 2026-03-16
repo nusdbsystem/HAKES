@@ -19,8 +19,8 @@ import requests
 import time
 from typing import List
 
-from utils import validate_addr
-from message import (
+from .utils import validate_addr
+from .message import (
     encode_list_collection_request,
     decode_list_collection_response,
     encode_load_collection_request,

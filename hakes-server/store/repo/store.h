@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-#ifndef HAKES_STORE_H_
-#define HAKES_STORE_H_
+#ifndef HAKES_SERVER_STORE_H_
+#define HAKES_SERVER_STORE_H_
 
 #include <string>
 #include <vector>
 #include <utility>
 #include <cstdint>
 
-namespace hakes {
+namespace hakes_server {
 
 /**
  * @brief Interface for external storage services.
@@ -115,6 +115,6 @@ class Store {
   std::string addr_;
 };
 
-}  // namespace hakes
+}  // namespace hakes_server
 
-#endif  // HAKES_STORE_H_
+#endif  // HAKES_SERVER_STORE_H_

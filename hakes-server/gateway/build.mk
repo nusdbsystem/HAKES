@@ -8,7 +8,7 @@ LLHTTP_DIR = $(DEPS_INSTALL_DIR)/llhttp
 WARNING_IGNORE = -Wno-sign-compare -Wno-unused-variable -Wno-comment -Wno-unused-function -Wno-unused-but-set-variable -Wno-unused-parameter -Wno-type-limits
 COMMON_FLAGS = -O2 -march=native -ftree-vectorize -Wall -Wextra $(WARNING_IGNORE)
 App_Cpp_Flags = $(COMMON_FLAGS)
-COMMON_INCLUDE_FLAGS = -I. -I$(PROJECT_ROOT_DIR)/include -I$(PROJECT_ROOT_DIR) -I$(HAKES_ROOT)/hakes-server/common
+COMMON_INCLUDE_FLAGS = -I. -I$(PROJECT_ROOT_DIR)/include -I$(PROJECT_ROOT_DIR) -I$(HAKES_ROOT)/hakes-server/common -I${HAKES_ROOT}/hakes-server/store
 App_Cpp_Flags += $(COMMON_INCLUDE_FLAGS)
 
 App_Link_Flags = -lrt -pthread -lm -lcrypto -lssl
@@ -96,6 +96,8 @@ Objects := src/workerimpl.o \
 	src/config.o \
 	src/search_result_agg.o \
 	src/data_manager_impl.o \
+	src/user_schema.o \
+	src/user_manager.o \
 	src/base64.o \
 	src/fileutil.o \
 	src/hexutil.o \
