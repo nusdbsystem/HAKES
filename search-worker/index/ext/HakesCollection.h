@@ -31,6 +31,8 @@ struct HakesSearchParams {
   int k;
   int k_factor;
   faiss::MetricType metric_type;
+
+  const faiss::IDSelector* id_selector = nullptr;
 };
 
 class HakesCollection {
