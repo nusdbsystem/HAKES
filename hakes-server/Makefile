@@ -1,74 +1,27 @@
-# Makefile for hakes-server
-# Coordinates builds across embedder, gateway, searcher, and store components
+INSTALL ?= install
+INSTALL_PREFIX ?= $(abspath ./install)
+INSTALL_LIB_DIR = $(INSTALL_PREFIX)/lib
+INSTALL_INCLUDE_DIR = $(INSTALL_PREFIX)/include/hakes-server
+INSTALL_BIN_DIR = $(INSTALL_PREFIX)/bin
+BUILD_DIR = $(abspath ./build)
 
-.PHONY: all build clean test install help
+.PHONY: all install clean mrproper
 
-# Default target
+build:
+	$(MAKE) -ef build.mk all
+
 all: build
 
-# Build all components
-build:
-# 	@echo "Building embedder/embed-worker..."
-# 	$(MAKE) -C embedder/embed-worker
-	@echo "Building gateway..."
-	$(MAKE) -C gateway
-	@echo "Building searcher..."
-	$(MAKE) -C searcher
-	@echo "Building store..."
-	$(MAKE) -C store
-	@echo "All components built successfully"
+install:
+	$(INSTALL) -d $(INSTALL_INCLUDE_DIR)
+	$(INSTALL) -C -m 644 include/* $(INSTALL_INCLUDE_DIR)
+	$(INSTALL) -d $(INSTALL_LIB_DIR)
+	if [ -f *.a ]; then $(INSTALL) -C -m 644 *.a $(INSTALL_LIB_DIR); fi
+	$(INSTALL) -d $(INSTALL_BIN_DIR)
+	$(INSTALL) -C -m 755 hakes_server* $(INSTALL_BIN_DIR)
 
-# Clean all components
 clean:
-# 	@echo "Cleaning embedder/embed-worker..."
-# 	$(MAKE) -C embedder/embed-worker clean
-	@echo "Cleaning gateway..."
-	$(MAKE) -C gateway clean
-	@echo "Cleaning searcher..."
-	$(MAKE) -C searcher clean
-	@echo "Cleaning store..."
-	$(MAKE) -C store clean
-	@echo "All components cleaned"
+	$(MAKE) -ef build.mk clean
 
-# Test all components
-test:
-# 	@echo "Testing embedder/embed-worker..."
-# 	$(MAKE) -C embedder/embed-worker test
-	@echo "Testing gateway..."
-	$(MAKE) -C gateway test
-	@echo "Testing searcher..."
-	$(MAKE) -C searcher test
-	@echo "Testing store..."
-	$(MAKE) -C store test
-	@echo "All tests completed"
-
-# Install all components
-install: build
-# 	@echo "Installing embedder/embed-worker..."
-# 	$(MAKE) -C embedder/embed-worker install
-	@echo "Installing gateway..."
-	$(MAKE) -C gateway install
-	@echo "Installing searcher..."
-	$(MAKE) -C searcher install
-	@echo "Installing store..."
-	$(MAKE) -C store install
-	@echo "All components installed"
-
-# Help target
-help:
-	@echo "Hakes Server Build System"
-	@echo "========================="
-	@echo ""
-	@echo "Available targets:"
-	@echo "  all       - Build all components (default)"
-	@echo "  build     - Build all components"
-	@echo "  clean     - Clean build artifacts from all components"
-	@echo "  test      - Run tests for all components"
-	@echo "  install   - Build and install all components"
-	@echo "  help      - Display this help message"
-	@echo ""
-	@echo "Component structure:"
-	@echo "  - embedder/embed-worker"
-	@echo "  - gateway"
-	@echo "  - searcher"
-	@echo "  - store"
+mrproper: clean
+	rm -rf ./install
