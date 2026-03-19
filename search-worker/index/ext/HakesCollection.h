@@ -18,11 +18,13 @@
 #define HAKES_SEARCHWORKER_INDEX_EXT_HAKESCOLLECTION_H_
 
 #include <atomic>
+#include <memory>
 
 #include "search-worker/index/VectorTransform.h"
 #include "search-worker/index/ext/IdMap.h"
 #include "search-worker/index/ext/IndexFlatL.h"
 #include "search-worker/index/ext/IndexIVFPQFastScanL.h"
+#include "search-worker/index/impl/IDSelector.h"
 
 namespace faiss {
 
@@ -31,7 +33,7 @@ struct HakesSearchParams {
   int k;
   int k_factor;
   faiss::MetricType metric_type;
-
+  // Filtered ANNS: optional ID selector for filtering
   const faiss::IDSelector* id_selector = nullptr;
 };
 
