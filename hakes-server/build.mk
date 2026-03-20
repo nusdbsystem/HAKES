@@ -56,7 +56,7 @@ Store_Link_Flags = $(MONGOCXX_LIBS) $(BSONCXX_LIBS) $(MONGOC_LIBS) $(BSON_LIBS) 
 
 BUILD_SENTINEL = $(BUILD_DIR)/.build_dirs_created
 
-all: $(BUILD_SENTINEL) libhakes_server.a hakes_server
+all: $(BUILD_SENTINEL) libhakes_server.a hakes_server seed-mongodb
 
 $(BUILD_SENTINEL):
 	@mkdir -p ${BUILD_DIR}
@@ -146,5 +146,16 @@ Server_Objects := ${BUILD_DIR}/common/server/service.o ${BUILD_DIR}/common/serve
 hakes_server: $(Server_Objects) libhakes_server.a
 	$(CXX) $(Server_Objects) -o $@ -L. -l:libhakes_server.a $(App_Link_Flags) $(Store_Link_Flags) $(Server_Additional_Link_Flags)
 
+SEED_SRC := $(shell find seed -name '*.cpp')
+SEED_OBJS := $(patsubst seed/%.cpp,$(BUILD_DIR)/seed/%.o,$(SEED_SRC))
+
+$(BUILD_DIR)/seed/%.o: seed/%.cpp
+	@mkdir -p $(dir $@)
+	@echo "Compile $< -> $@"
+	$(CXX) $(Store_Cpp_Flags) -c $< -o $@
+
+seed-mongodb: $(SEED_OBJS) libhakes_server.a
+	$(CXX) $(SEED_OBJS) -o $@ -L. -l:libhakes_server.a $(App_Link_Flags) $(Store_Link_Flags)
+
 clean:
-	@rm -rf build libhakes_server.a hakes_server
+	@rm -rf build libhakes_server.a hakes_server seed-mongodb

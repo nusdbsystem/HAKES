@@ -19,6 +19,7 @@ install:
 	if [ -f *.a ]; then $(INSTALL) -C -m 644 *.a $(INSTALL_LIB_DIR); fi
 	$(INSTALL) -d $(INSTALL_BIN_DIR)
 	$(INSTALL) -C -m 755 hakes_server* $(INSTALL_BIN_DIR)
+	$(INSTALL) -C -m 755 seed-* $(INSTALL_BIN_DIR)
 
 clean:
 	$(MAKE) -ef build.mk clean

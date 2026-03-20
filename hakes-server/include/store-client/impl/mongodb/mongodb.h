@@ -17,6 +17,7 @@
 #ifndef HAKES_STORE_MONGODB_H_
 #define HAKES_STORE_MONGODB_H_
 
+#include <bsoncxx/builder/stream/document.hpp>
 #include <bsoncxx/document/view.hpp>
 #include <cstdint>
 #include <memory>

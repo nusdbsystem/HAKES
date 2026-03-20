@@ -441,11 +441,9 @@ bsoncxx::document::value MongoDB::UserToBson(const User& user) {
     roles_array << ToString(role);
   }
 
-  document doc{};
-  doc << "username" << user.Username() << "password_hash" << user.PasswordHash()
-      << "roles" << roles_array << finalize;
-
-  return doc.extract();
+  return document{} << "username" << user.Username() << "password_hash"
+                    << user.PasswordHash() << "roles" << roles_array
+                    << finalize;
 }
 
 }  // namespace hakes_store
