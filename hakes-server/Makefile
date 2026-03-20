@@ -14,7 +14,7 @@ all: build
 
 install:
 	$(INSTALL) -d $(INSTALL_INCLUDE_DIR)
-	$(INSTALL) -C -m 644 include/* $(INSTALL_INCLUDE_DIR)
+	rsync -av include/ $(INSTALL_INCLUDE_DIR)/
 	$(INSTALL) -d $(INSTALL_LIB_DIR)
 	if [ -f *.a ]; then $(INSTALL) -C -m 644 *.a $(INSTALL_LIB_DIR); fi
 	$(INSTALL) -d $(INSTALL_BIN_DIR)

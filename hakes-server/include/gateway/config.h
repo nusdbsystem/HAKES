@@ -36,13 +36,15 @@ class HakesWorkerConfig {
                     const std::string& embed_endpoint_addr,
                     const std::vector<std::string>& search_worker_addrs,
                     const int preferred_search_worker,
-                    const std::string& store_addr)
+                    const std::string& store_addr,
+                    const std::string& store_type)
       : embed_endpoint_type_(embed_endpoint_type),
         embed_endpoint_config_(embed_endpoint_config),
         embed_endpoint_addr_(embed_endpoint_addr),
         search_worker_addrs_(search_worker_addrs),
         preferred_search_worker_(preferred_search_worker),
-        store_addr_(store_addr) {}
+        store_addr_(store_addr),
+        store_type_(store_type) {}
 
   ~HakesWorkerConfig() = default;
   // copy constructor and assignment operator
@@ -93,6 +95,8 @@ class HakesWorkerConfig {
 
   inline std::string GetStoreAddr() const { return store_addr_; }
 
+  inline std::string GetStoreType() const { return store_type_; }
+
   inline std::string to_string() const {
     std::string s;
     s.reserve(400);
@@ -106,6 +110,8 @@ class HakesWorkerConfig {
          std::to_string(preferred_search_worker_);
     s += "\nstore_addr: ";
     s += store_addr_;
+    s += "\nstore_type: ";
+    s += store_type_;
     s += "\n";
     return s;
   }
@@ -117,6 +123,7 @@ class HakesWorkerConfig {
   std::vector<std::string> search_worker_addrs_;
   int preferred_search_worker_;
   std::string store_addr_;
+  std::string store_type_;
 };
 
 HakesWorkerConfig ParseHakesWorkerConfig(const std::string& cfg);

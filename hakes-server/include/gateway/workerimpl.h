@@ -33,7 +33,8 @@ class WorkerImpl : public Worker {
   WorkerImpl(HakesWorkerConfig config, std::unique_ptr<DataManager>&& dm)
       : config_(config), dm_(std::move(dm)) {
     store_ = hakes_store::StoreFactory(
-                 hakes_store::StoreConfig{config.GetStoreAddr(), "mongodb"})
+                 hakes_store::StoreConfig{config.GetStoreType(),
+                                          config.GetStoreAddr()})
                  .CreateStore();
   };
 

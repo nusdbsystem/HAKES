@@ -16,6 +16,7 @@
 
 #include "gateway/config.h"
 
+#include <iostream>
 #include <stdexcept>
 
 #include "utils/json.h"
@@ -69,6 +70,11 @@ HakesWorkerConfig ParseHakesWorkerConfig(const std::string& cfg) {
 
   // get HAKES-store config
 
+  std::string store_type;
+  if (j.hasKey("store_type")) {
+    store_type = j["store_type"].ToString();
+  }
+
   std::string store_addr;
   if (j.hasKey("store_addr")) {
     store_addr = j["store_addr"].ToString();
@@ -76,7 +82,7 @@ HakesWorkerConfig ParseHakesWorkerConfig(const std::string& cfg) {
 
   return HakesWorkerConfig(embed_endpoint_type, embed_endpoint_config,
                            embed_endpoint_addr, search_worker_addrs, preference,
-                           store_addr);
+                           store_addr, store_type);
 }
 
 }  // namespace hakes_worker

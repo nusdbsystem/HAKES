@@ -7,6 +7,6 @@
     "127.0.0.1:26010"
   ],
   "preferred_search_worker": 0,
-  "store_type": "hakes-store",
-  "store_addr": "127.0.0.1:26020"
+  "store_type": "mongodb",
+  "store_addr": "host.docker.internal:27017"
 }
