@@ -65,11 +65,6 @@ class HakesCollection {
                       std::unique_ptr<float[]>* distances,
                       std::unique_ptr<faiss::idx_t[]>* labels) = 0;
 
-  virtual bool SearchWithIds(int n, int d, const float* query,
-                      const HakesSearchParams& params,
-                      std::unique_ptr<float[]>* distances,
-                      std::unique_ptr<faiss::idx_t[]>* labels) = 0;
-
   virtual bool Rerank(int n, int d, const float* query, int k,
                       faiss::idx_t* k_base_count, faiss::idx_t* base_labels,
                       float* base_distances,
