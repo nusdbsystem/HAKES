@@ -18,17 +18,20 @@
 #define HAKES_SEARCHWORKER_INDEX_EXT_HAKESFILTERINDEX_H_
 
 #include "search-worker/index/ext/HakesCollection.h"
+#include "search-worker/index/ext/IndexFlatL.h"
+#include "search-worker/index/ext/TagChecker.h"
 
 namespace faiss {
+
 class HakesFilterIndex : public HakesCollection {
  public:
-  HakesFilterIndex() {};
+  HakesFilterIndex() {
+    del_checker_.reset(new TagChecker<idx_t>());
+  }
   ~HakesFilterIndex() = default;
 
-  // delete copy constructors and assignment operators
   HakesFilterIndex(const HakesFilterIndex&) = delete;
-  HakesFilterIndex& operator=(const HakesFilterIndex&) = delete; 
-  // delete move constructors and assignment operators
+  HakesFilterIndex& operator=(const HakesFilterIndex&) = delete;
   HakesFilterIndex(HakesFilterIndex&&) = delete;
   HakesFilterIndex& operator=(HakesFilterIndex&&) = delete;
 
@@ -37,15 +40,12 @@ class HakesFilterIndex : public HakesCollection {
 
   void UpdateIndex(const HakesCollection* other) override { return; }
 
-  // it is assumed that receiving engine shall store the full vecs of all
-  // inputs.
   bool AddWithIds(int n, int d, const float* vecs, const faiss::idx_t* ids,
                   faiss::idx_t* assign, int* vecs_t_d,
                   std::unique_ptr<float[]>* vecs_t) override;
 
   bool AddBase(int n, int d, const float* vecs,
                const faiss::idx_t* ids) override {
-    // noop. We may add a quantized flat index later
     return true;
   }
 
@@ -59,6 +59,12 @@ class HakesFilterIndex : public HakesCollection {
               std::unique_ptr<faiss::idx_t[]>* labels) override;
 
   bool SearchWithIds(int n, int d, const float* query, const HakesSearchParams& params,
+              std::unique_ptr<float[]>* distances,
+              std::unique_ptr<faiss::idx_t[]>* labels) override;
+
+  bool Rerank(int n, int d, const float* query, int k,
+              faiss::idx_t* k_base_count, faiss::idx_t* base_labels,
+              float* base_distances,
               std::unique_ptr<float[]>* distances,
               std::unique_ptr<faiss::idx_t[]>* labels) override;
 
@@ -79,8 +85,8 @@ class HakesFilterIndex : public HakesCollection {
 
   std::unique_ptr<faiss::IndexFlatL> refine_index_;
   std::unique_ptr<TagChecker<idx_t>> del_checker_;
-}; // namespace faiss
+};
 
-}
+}  // namespace faiss
 
 #endif  // HAKES_SEARCHWORKER_INDEX_EXT_HAKESFILTERINDEX_H_
