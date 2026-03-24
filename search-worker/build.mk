@@ -94,6 +94,7 @@ Objects := src/worker.o \
 	src/index-build/ext/IndexIVFFastScanL.o \
 	src/index-build/ext/IndexIVFL.o \
 	src/index-build/ext/IndexIVFPQFastScanL.o \
+	src/index-build/ext/HakesFilterIndex.o \
 	src/index-build/ext/IndexRefineL.o \
 	src/index-build/ext/IndexScalarQuantizerL.o \
 	src/index-build/impl/AuxIndexStructures.o \
