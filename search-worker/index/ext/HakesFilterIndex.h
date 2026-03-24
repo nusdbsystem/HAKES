@@ -60,7 +60,7 @@ class HakesFilterIndex : public HakesCollection {
 
   bool SearchWithIds(int n, int d, const float* query, const HakesSearchParams& params,
               std::unique_ptr<float[]>* distances,
-              std::unique_ptr<faiss::idx_t[]>* labels) override;
+              std::unique_ptr<faiss::idx_t[]>* labels);
 
   bool Rerank(int n, int d, const float* query, int k,
               faiss::idx_t* k_base_count, faiss::idx_t* base_labels,
