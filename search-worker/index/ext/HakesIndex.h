@@ -119,6 +119,7 @@ class HakesIndex : public HakesCollection {
   mutable pthread_rwlock_t mapping_mu_;
   std::unique_ptr<faiss::IDMap> mapping_;
   std::unique_ptr<faiss::IndexFlatL> refine_index_;
+  std::unique_ptr<FilterIndex> filter_index_;
 
   bool keep_pa_ = false;
   std::unordered_map<faiss::idx_t, faiss::idx_t> pa_mapping_;

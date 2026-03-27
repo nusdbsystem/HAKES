@@ -19,6 +19,7 @@
 
 #include "search-worker/index/IndexFlat.h"
 #include "search-worker/index/VectorTransform.h"
+#include "search-worker/index/ext/HakesFilterIndex.h"
 #include "search-worker/index/ext/HakesFlatIndex.h"
 #include "search-worker/index/ext/HakesIndex.h"
 #include "search-worker/index/ext/IdMap.h"
@@ -46,6 +47,9 @@ void save_hakes_index(hakes::IOWriter* ff, hakes::IOWriter* rf,
 
 bool load_hakes_flatindex(hakes::IOReader* f, HakesFlatIndex* idx);
 void save_hakes_flatindex(hakes::IOWriter* f, const HakesFlatIndex* idx);
+
+bool load_hakes_filterindex(hakes::IOReader* f, HakesFilterIndex* idx);
+void save_hakes_filterindex(hakes::IOWriter* f, const HakesFilterIndex* idx);
 
 void save_init_params(hakes::IOWriter* f,
                       const std::vector<VectorTransform*>* vts,
