@@ -263,7 +263,11 @@ void HakesFilterIndex::InitFavorParams(size_t max_elements, size_t M,
   
   element_levels_.resize(max_elements_, 0);
   link_lists_.resize(max_elements_, nullptr);
-  link_list_locks_.resize(max_elements_);
+  link_list_locks_.clear();
+  link_list_locks_.reserve(max_elements_);
+  for (size_t i = 0; i < max_elements_; i++) {
+    link_list_locks_.emplace_back(std::make_unique<std::mutex>());
+  }
   
   mult_ = 1.0f / std::log(1.0f * static_cast<float>(M_));
   enterpoint_node_ = 0;
@@ -290,7 +294,10 @@ bool HakesFilterIndex::BuildFilterIndex(int n, int d, const float* vecs,
     data_level0_memory_.resize(new_capacity * size_data_per_element_);
     element_levels_.resize(new_capacity, 0);
     link_lists_.resize(new_capacity, nullptr);
-    link_list_locks_.resize(new_capacity);
+    link_list_locks_.reserve(new_capacity);
+    while (link_lists_locks_.size() < new_capacity) {
+      link_lists_locks_.emplace_back(std::make_unique<std::mutex>());
+    }
     
     max_elements_ = new_capacity;
   }
@@ -870,7 +877,11 @@ bool HakesFilterIndex::LoadFilterIndex(const std::string& path) {
             static_cast<std::streamsize>(cur_element_count_ * sizeof(int)));
   
   link_lists_.resize(max_elements_, nullptr);
-  link_list_locks_.resize(max_elements_);
+  link_list_locks_.clear();
+  link_list_locks_.reserve(max_elements_);
+  for (size_t i = 0; i < max_elements_; i++) {
+    link_list_locks_.emplace_back(std::make_unique<std::mutex>());
+  }
   
   for (size_t i = 0; i < cur_element_count_; i++) {
     unsigned int link_size;
