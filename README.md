@@ -45,6 +45,4 @@ Please cite our publication when you use HAKES in your research or development.
 
 Beng Chin Ooi (ooibc@zju.edu.cn)
 
-Zhongle Xie   (xiezl@zju.edu.cn)
-
 Cong Yue      (yuecong@comp.nus.edu.sg)
