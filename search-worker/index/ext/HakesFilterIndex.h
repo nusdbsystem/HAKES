@@ -171,7 +171,7 @@ class HakesFilterIndex : public HakesCollection {
   int maxlevel_ = -1;
   
   mutable std::mutex label_lookup_lock_;
-  mutable std::vector<std::mutex> link_list_locks_;
+  mutable std::vector<std::unique_ptr<std::mutex>> link_list_locks_;
   mutable std::mutex deleted_elements_lock_;
   mutable std::mutex delta_mutex_;
   
