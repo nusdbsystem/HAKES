@@ -295,8 +295,8 @@ bool HakesFilterIndex::BuildFilterIndex(int n, int d, const float* vecs,
     element_levels_.resize(new_capacity, 0);
     link_lists_.resize(new_capacity, nullptr);
     link_list_locks_.reserve(new_capacity);
-    while (link_lists_locks_.size() < new_capacity) {
-      link_lists_locks_.emplace_back(std::make_unique<std::mutex>());
+    while (link_list_locks_.size() < new_capacity) {
+      link_list_locks_.emplace_back(std::make_unique<std::mutex>());
     }
     
     max_elements_ = new_capacity;
