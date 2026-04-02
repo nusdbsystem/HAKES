@@ -16,6 +16,7 @@
  */
 
 #include "search-worker/index/MetricType.h"
+#include <cstddef>
 #include <vector>
 
 namespace faiss {
