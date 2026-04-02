@@ -8,6 +8,7 @@
 #ifndef HAKES_SEARCHWORKER_INDEX_IMPL_IDSELECTOR_H_
 #define HAKES_SEARCHWORKER_INDEX_IMPL_IDSELECTOR_H_
 
+#include <cstddef>
 #include <unordered_set>
 #include <vector>
 
