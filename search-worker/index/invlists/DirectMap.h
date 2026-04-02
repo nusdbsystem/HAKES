@@ -11,6 +11,7 @@
 #define HAKES_SEARCHWORKER_INDEX_INVLISTS_DIRECTMAP_H_
 
 #include "search-worker/index/invlists/InvertedLists.h"
+#include <cstddef>
 #include <unordered_map>
 
 namespace faiss {
