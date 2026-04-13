@@ -489,7 +489,7 @@ float HakesFilterIndex::SelectivityEstimator(const faiss::IDSelector* id_selecto
   size_t count = 0;
   size_t sample_size = std::min(cur_element_count_, static_cast<size_t>(1000));
   size_t step = cur_element_count_ / sample_size;
-  if (step < 1) step = 1;
+  if (step == 0) step = 1;
   
   for (size_t i = 0; i < cur_element_count_; i += step) {
     idx_t label = GetExternalLabel(static_cast<tableint>(i));
